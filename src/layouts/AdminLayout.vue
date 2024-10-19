@@ -1,10 +1,25 @@
 <template>
-  <q-layout view="hHh lpR fFf"> <!-- 반응형 레이아웃 설정 -->
+  <q-layout view="hHh lpR fFf">
+    <!-- 반응형 레이아웃 설정 -->
     <q-header elevated>
       <q-toolbar>
-        <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" v-if="$q.screen.lt.md" />
-        <q-toolbar-title>Admin Dashboard</q-toolbar-title>
-        <q-btn flat round dense label="Logout" v-if="isLoggedIn" @click="handleLinkAction('adminlogout')" />
+        <q-btn
+          flat
+          round
+          dense
+          icon="menu"
+          @click="toggleLeftDrawer"
+          v-if="$q.screen.lt.md"
+        />
+        <q-toolbar-title>Bid System Admin Menu</q-toolbar-title>
+        <q-btn
+          flat
+          round
+          dense
+          label="Logout"
+          v-if="isLoggedIn"
+          @click="handleLinkAction('adminlogout')"
+        />
       </q-toolbar>
     </q-header>
 
@@ -34,16 +49,15 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import NavBarAdmin from './NavBarAdmin.vue';
-import { url } from '../utils/messagesAPIs';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import NavBarAdmin from "./NavBarAdmin.vue";
+import { url } from "../utils/messagesAPIs";
 
 export default {
-  name: 'AdminHome',
-  components: {
-  },
+  name: "AdminHome",
+  components: {},
   setup() {
     const $q = useQuasar(); // Quasar 인스턴스 사용
     const router = useRouter();
@@ -62,7 +76,7 @@ export default {
 
     const checkLoginStatus = () => {
       if (!isLoggedIn.value) {
-        router.push('/admin/adminlogin');
+        router.push("/admin/adminlogin");
       }
     };
 
@@ -72,7 +86,7 @@ export default {
 
     onMounted(() => {
       checkLoginStatus();
-      sessionStorage.setItem('tableName', 'admin');
+      sessionStorage.setItem("tableName", "admin");
     });
 
     return {

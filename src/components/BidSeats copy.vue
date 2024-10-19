@@ -210,10 +210,12 @@ export default {
 
     const fetchMyLast = async () => {
       try {
+        alert("22222222222222222222222");
         const response = await axios.get(API.GET_MY_LASTBIDS, {
           params: { telno: sessionTelno.value, matchNumber: matchNumber.value },
           withCredentials: true,
         });
+        alert("33333333333333333333333333");
         // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
         seatBidArray.value = response.data.map((seat) => {
           // 낙찰 여부에 따라 total_win_amount와 total_win_count를 업데이트
@@ -234,11 +236,13 @@ export default {
             historyShow: false,
           };
         });
+        alert("444444444444444444444444444");
         // 총 입찰 금액을 계산
         totalBidAmount.value = seatBidArray.value.reduce(
           (sum, seat) => sum + (seat.bid_amount || 0),
           0
         );
+        alert("5555555555555555555555555555555");
       } catch (error) {
         handleError(error);
       }
@@ -320,6 +324,7 @@ export default {
             bid_count: seat.total_bidders || 0, // 입찰자 수 추가
           };
         });
+        alert("333");
       } catch (error) {
         handleError(error);
       }
@@ -604,10 +609,15 @@ export default {
       } else {
         await fetchSessionUserId();
       }
+      alert("111");
       await fetchBidStatus(matchNumber.value);
+      alert("222");
       await fetchMyLast();
+      alert("333");
       await fetchMyBids();
+      alert("444");
       await fetchAllBids();
+      alert("555");
     });
 
     return {

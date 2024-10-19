@@ -1,27 +1,46 @@
+<!-- v-if="$q.screen.lt.md" -->
+//q-btn용
 <template>
   <q-layout view="hHh lpR fFf" class="page-container">
     <!-- 헤더 -->
     <q-header elevated>
       <q-toolbar>
-        <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" v-if="$q.screen.lt.md" />
-        <q-toolbar-title>User Dashboard</q-toolbar-title>
-        <q-btn flat round dense label="Logout" v-if="isLoggedIn" @click="handleLinkAction('userlogout')" />
+        <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" />
+        <q-toolbar-title>입찰 제출 및 결제 시스템</q-toolbar-title>
+        <q-btn
+          flat
+          round
+          dense
+          label="Logout"
+          v-if="isLoggedIn"
+          @click="handleLinkAction('userLogout')"
+        />
       </q-toolbar>
     </q-header>
 
     <!-- 사이드바 (Drawer) -->
     <q-drawer v-model="leftDrawerOpen" side="left" bordered>
       <q-list>
-        <q-item clickable v-ripple @click="handleLinkAction('selectvenue')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('selectVenue')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>홈</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('userlogin')">
+        <q-item clickable v-ripple @click="handleLinkAction('userLogin')">
           <q-item-section>로그인</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('updateuser')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item clickable v-ripple @click="handleLinkAction('updateUser')">
           <q-item-section>사용자 정보 수정</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('userlogout')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('userLogout')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>로그아웃</q-item-section>
         </q-item>
       </q-list>
@@ -35,13 +54,13 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { url } from '../utils/messagesAPIs';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import { url } from "../utils/messagesAPIs";
 
 export default {
-  name: 'UserHome',
+  name: "UserHome",
   setup() {
     const $q = useQuasar(); // Quasar 인스턴스
     const router = useRouter();
@@ -50,7 +69,7 @@ export default {
     const leftDrawerOpen = ref(false); // Drawer 열기 상태
 
     const handleLinkAction = (action) => {
-      router.push(url[action]);  // 링크 클릭 시 라우터로 경로 이동
+      router.push(url[action]); // 링크 클릭 시 라우터로 경로 이동
     };
 
     const handleUpdateStatus = (status) => {
@@ -60,7 +79,7 @@ export default {
 
     const checkLoginStatus = () => {
       if (!isLoggedIn.value) {
-        router.push(url.userlogin);
+        router.push(url.userLogin);
       }
     };
 
@@ -70,7 +89,7 @@ export default {
 
     onMounted(() => {
       checkLoginStatus(); // 로그인 상태 확인
-      sessionStorage.setItem('tableName', "user");
+      sessionStorage.setItem("tableName", "user");
     });
 
     return {

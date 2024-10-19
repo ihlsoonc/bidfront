@@ -3,7 +3,7 @@
     <div class="q-gutter-md">
       <q-card class="q-pa-md">
         <q-card-section>
-          <q-title class="text-center">로그인</q-title>
+          <div class="text-center">로그인</div>
         </q-card-section>
 
         <q-card-section>
@@ -33,7 +33,12 @@
         </q-card-section>
 
         <q-card-actions align="around">
-          <q-btn label="비밀번호 찾기" @click="handleFindPassword" flat />
+          <q-btn
+            label="비밀번호 찾기"
+            @click="handleFindPassword"
+            flat
+            color="standard"
+          />
           <q-btn label="비밀번호 변경" @click="handleChangePassword" flat />
           <q-btn label="회원가입" @click="handleRegister" flat />
         </q-card-actions>
@@ -43,63 +48,72 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
-import { API, url, messageCommon } from '../utils/messagesAPIs';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+import { API, url, messageCommon } from "../utils/messagesAPIs";
 
 export default {
   setup(props, { emit }) {
     const userData = ref({
-      query: '',
-      password: '',
+      query: "",
+      password: "",
     });
-    const sessionUserId = ref('');
-    const tableName = ref('');
-    const message = ref('');
+    const sessionTelno = ref("");
+    const sessionUserName = ref("");
+    const tableName = ref("");
+    const message = ref("");
     const router = useRouter();
 
     const handleFindPassword = () => {
-      if (tableName.value === 'user') {
-        router.push({ name: 'ChangeUserPassword', query: { tab: 1 } });
+      if (tableName.value === "user") {
+        router.push({ path: url.changeUserPassword, query: { tab: 1 } });
       } else {
-        router.push({ name: 'ChangeAdminPassword', query: { tab: 1 } });
+        router.push({ path: url.changeAdminPassword, query: { tab: 1 } });
       }
     };
 
     const handleChangePassword = () => {
-      if (tableName.value === 'user') {
-        router.push({ name: 'ChangeUserPassword', query: { tab: 2 } });
-      } else {
-        router.push({ name: 'ChangeAdminPassword', query: { tab: 2 } });
-      }
+      router.push({
+        path:
+          tableName.value === "user"
+            ? url.changeUserPassword
+            : url.changeAdminPassword,
+        query: { tab: 2 },
+      });
     };
 
     const handleRegister = () => {
-      if (tableName.value === "user") {
-        router.push(url.registeruser);
-      } else {
-        router.push(url.registeradmin);
-      }
+      router.push(
+        tableName.value === "user" ? url.registerUser : url.registerAdmin
+      );
     };
 
     const handleSubmit = async () => {
-      message.value = '';
+      message.value = "";
       try {
         if (!validateInput(userData.value)) {
           return;
         }
 
-        const response = await axios.post(API.USER_LOGIN, {
-          query: userData.value.query,
-          password: userData.value.password,
-          table: tableName.value,
-          queryType: "telno",
-        }, { withCredentials: true });
+        const response = await axios.post(
+          API.USER_LOGIN,
+          {
+            query: userData.value.query,
+            password: userData.value.password,
+            table: tableName.value,
+            queryType: "telno",
+          },
+          { withCredentials: true }
+        );
 
         if (response.status === 200) {
-          emit('update-status', { isLoggedIn: true, hasSelectedMatch: false });
-          router.push(tableName.value === 'user' ? url.selectvenue : url.selectvenueadmin);
+          emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
+          router.push(
+            tableName.value === "user"
+              ? url.selectVenueUser
+              : url.selectVenueAdmin
+          );
         }
       } catch (error) {
         handleError(error);
@@ -108,13 +122,13 @@ export default {
 
     const validateInput = (data) => {
       const { query, password } = data;
-      if (!query || query.trim() === '') {
-        alert('사용자 아이디 또는 전화번호를 입력해 주세요.');
+      if (!query || query.trim() === "") {
+        alert("사용자 아이디 또는 전화번호를 입력해 주세요.");
         return false;
       }
 
-      if (!password || password.trim() === '') {
-        alert('비밀번호를 입력해 주세요.');
+      if (!password || password.trim() === "") {
+        alert("비밀번호를 입력해 주세요.");
         return false;
       }
 
@@ -122,8 +136,8 @@ export default {
     };
 
     const resetSetting = () => {
-      userData.value = { query: '', password: '' };
-      emit('update-status', { isLoggedIn: false, hasSelectedMatch: false });
+      userData.value = { query: "", password: "" };
+      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
     };
 
     const handleError = (error) => {
@@ -137,7 +151,7 @@ export default {
     };
 
     const fetchSessionTableName = () => {
-      const sessiontableName = sessionStorage.getItem('tableName');
+      const sessiontableName = sessionStorage.getItem("tableName");
       if (sessiontableName) {
         tableName.value = sessiontableName;
       }
@@ -145,10 +159,15 @@ export default {
 
     const fetchSessionUserId = async () => {
       try {
-        const response = await axios.get(API.GET_SESSION_USERID, { withCredentials: true });
-        if (response.data.status === 200) {
-          sessionUserId.value = response.data.userId;
-          message.value = `${sessionUserId.value}님은 로그인 상태입니다.`;
+        const response = await axios.get(API.GET_SESSION_USERID, {
+          withCredentials: true,
+        });
+        if (response.status === 200) {
+          sessionTelno.value = response.data.telno;
+          sessionUserName.value = response.data.userName;
+          message.value = `${sessionUserName.value}님은 로그인 상태입니다.`;
+          emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
+          alert(message.value);
         } else {
           message.value = `로그인 해주세요.`;
           resetSetting();
@@ -167,7 +186,8 @@ export default {
 
     return {
       userData,
-      sessionUserId,
+      sessionTelno,
+      sessionUserName,
       message,
       tableName,
       handleSubmit,

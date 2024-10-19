@@ -3,40 +3,87 @@
     <!-- 헤더 -->
     <q-header elevated>
       <q-toolbar>
-        <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" v-if="$q.screen.lt.md" />
-        <q-toolbar-title>Admin Dashboard</q-toolbar-title>
-        <q-btn flat round dense label="Logout" v-if="isLoggedIn" @click="handleLinkAction('adminlogout')" />
+        <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" />
+        <q-toolbar-title>입찰관리 관리자 메뉴</q-toolbar-title>
+        <q-btn
+          flat
+          round
+          dense
+          label="logout"
+          v-if="isLoggedIn"
+          @click="handleLinkAction('adminLogout')"
+        />
       </q-toolbar>
     </q-header>
 
     <!-- 사이드바 (Drawer) -->
     <q-drawer v-model="leftDrawerOpen" side="left" bordered>
       <q-list>
-        <q-item clickable v-ripple @click="handleLinkAction('adminlogin')">
+        <q-item clickable v-ripple @click="handleLinkAction('adminLogin')">
           <q-item-section>로그인</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('selectmatch')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('selectMatchAdmin')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>대회선택</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('bidresults')" :class="{ 'disabled': !isLoggedIn || !hasSelectedMatch }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('bidResults')"
+          :class="{ disabled: !isLoggedIn || !hasSelectedMatch }"
+        >
           <q-item-section>입찰현황 및 낙찰진행</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('managematch')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('manageMatch')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>대회관리</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('approvematch')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('approveMatch')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>대회승인</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('updateseatprice')" :class="{ 'disabled': !isLoggedIn || !hasSelectedMatch }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('updateSeatPrice')"
+          :class="{ disabled: !isLoggedIn || !hasSelectedMatch }"
+        >
           <q-item-section>좌석가격입력</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('managevenue')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('manageVenue')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>경기장관리</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('updateadmin')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('updateAdmin')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>사용자정보수정</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('adminlogout')" :class="{ 'disabled': !isLoggedIn }">
+        <q-item
+          clickable
+          v-ripple
+          @click="handleLinkAction('adminLogout')"
+          :class="{ disabled: !isLoggedIn }"
+        >
           <q-item-section>로그아웃</q-item-section>
         </q-item>
       </q-list>
@@ -50,13 +97,13 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { url } from '../utils/messagesAPIs';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import { useQuasar } from "quasar";
+import { url } from "../utils/messagesAPIs";
 
 export default {
-  name: 'AdminDashboard',
+  name: "AdminDashboard",
   setup() {
     const $q = useQuasar();
     const router = useRouter();
@@ -75,7 +122,7 @@ export default {
 
     const checkLoginStatus = () => {
       if (!isLoggedIn.value) {
-        router.push('/admin/adminlogin');
+        router.push(url.adminLogin);
       }
     };
 
@@ -85,7 +132,7 @@ export default {
 
     onMounted(() => {
       checkLoginStatus();
-      sessionStorage.setItem('tableName', 'admin');
+      sessionStorage.setItem("tableName", "admin");
     });
 
     return {

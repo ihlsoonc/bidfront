@@ -5,17 +5,24 @@
         <q-title level="h5">사용자 등록 및 수정</q-title>
       </q-card-section>
 
-      <q-form @submit.prevent="handleSubmit">
+      <q-form>
         <!-- 전화번호 입력 -->
         <q-input
           v-model="userData.telno"
           label="전화번호"
           placeholder="전화번호를 입력하세요."
-          :rules="[val => (val.length === 11) || '전화번호는 11자리여야 합니다.']"
-          @input="checkTelNumber"
+          :rules="[
+            (val) => val.length === 11 || '전화번호는 11자리여야 합니다.',
+          ]"
+          @update:model-value="checkTelNumber"
+          :disable="isValidTelno"
           maxlength="11"
         />
-        <q-btn @click="handleTelnoCheck" label="인증번호 발송" color="primary" />
+        <q-btn
+          @click="handleTelnoCheck"
+          label="인증번호 발송"
+          color="primary"
+        />
 
         <!-- 인증번호 입력 -->
         <q-input
@@ -24,9 +31,14 @@
           label="인증번호"
           placeholder="인증번호 6자리를 입력하세요."
           maxlength="6"
-          @input="checkAuthNumber"
+          @update:model-value="checkAuthNumber"
         />
-        <q-btn v-if="codeInputMode" @click="handleTelnoCheck" label="재발송" color="secondary" />
+        <q-btn
+          v-if="codeInputMode"
+          @click="handleTelnoCheck"
+          label="재발송"
+          color="secondary"
+        />
 
         <q-banner v-if="telmsg" class="q-mt-md">{{ telmsg }}</q-banner>
 
@@ -36,7 +48,7 @@
           label="암호"
           type="password"
           placeholder="암호를 입력하세요."
-          :rules="[val => !!val || '암호를 입력해 주세요.']"
+          :rules="[(val) => !!val || '암호를 입력해 주세요.']"
         />
 
         <!-- 사용자 이름 입력 -->
@@ -44,7 +56,7 @@
           v-model="userData.userName"
           label="사용자 이름"
           placeholder="이름을 입력하세요."
-          :rules="[val => !!val || '이름을 입력해 주세요.']"
+          :rules="[(val) => !!val || '이름을 입력해 주세요.']"
         />
 
         <!-- 이메일 입력 -->
@@ -61,23 +73,40 @@
           label="우편번호"
           type="number"
           placeholder="우편번호를 입력하세요."
-          :rules="[val => val && val.length === 5 || '우편번호는 5자리여야 합니다.']"
         />
 
         <!-- 주소 입력 -->
-        <q-input v-model="userData.addr1" label="주소 1" placeholder="주소를 입력하세요." />
-        <q-input v-model="userData.addr2" label="주소 2" placeholder="세부 주소를 입력하세요." />
+        <q-input
+          v-model="userData.addr1"
+          label="주소 1"
+          placeholder="주소를 입력하세요."
+        />
+        <q-input
+          v-model="userData.addr2"
+          label="주소 2"
+          placeholder="세부 주소를 입력하세요."
+        />
 
         <!-- 사용자 타입 선택 (관리자용) -->
         <q-select
-          v-if="!isUserTable"
+          v-if="isAdmin"
           v-model="userData.userType"
           label="사용자 타입"
           :options="adminTypesOptions"
         />
 
-        <q-btn label="입력 내용 제출" type="submit" color="primary" class="q-mt-md" />
-
+        <q-btn
+          label="내용 제출"
+          @click="handleSubmit"
+          color="primary"
+          class="q-mt-md"
+        />
+        <q-btn
+          label="작업 취소"
+          @click="handleCancelSubmit"
+          color="primary"
+          class="q-mt-md"
+        />
         <q-banner v-if="message" class="q-mt-md">{{ message }}</q-banner>
       </q-form>
     </q-card>
@@ -85,32 +114,38 @@
 </template>
 
 <script>
-import axios from 'axios';
-import { ref, onMounted } from 'vue';
-import { API, messageCommon, ADMIN_TYPES } from '../utils/messagesAPIs';
+import axios from "axios";
+import { ref, onMounted } from "vue";
+import { API, messageCommon } from "../utils/messagesAPIs";
 
 export default {
   setup() {
     const userData = ref({
-      userId: '',
-      password: '',
-      userName: '',
-      email: '',
-      telno: '',
-      postCode: '',
-      addr1: '',
-      addr2: '',
-      userType: ''
+      userId: "",
+      password: "",
+      userName: "",
+      email: "",
+      telno: "",
+      postCode: "",
+      addr1: "",
+      addr2: "",
+      userType: "",
     });
-    const message = ref('');
-    const tableName = ref('');
-    const isUserTable = ref(false);
+    const adminTypesOptions = [
+      { label: "총괄관리자", value: "H" },
+      { label: "대회승인자", value: "A" },
+      { label: "대회운영자", value: "B" },
+      { label: "보조운영자", value: "C" },
+    ];
+    const message = ref("");
+    const tableName = ref("");
+    const isAdmin = ref(false);
     const codeInputMode = ref(false);
     const isValidTelno = ref(false);
-    const telmsg = ref('');
+    const telmsg = ref("");
 
     const handleTelnoCheck = async () => {
-      userData.value.authNumber = '';
+      userData.value.authNumber = "";
       if (!userData.value.telno) {
         alert("전화번호를 입력해 주세요.");
         return false;
@@ -123,10 +158,13 @@ export default {
       }
       codeInputMode.value = true;
       try {
-        const response = await axios.post(API.SEND_ONE_SMS, { ...userData.value, table: tableName.value });
+        const response = await axios.post(API.SEND_ONE_SMS, {
+          ...userData.value,
+          table: tableName.value,
+        });
         if (response.status === 200) {
           telmsg.value = response.data.message + response.data.verificationCode;
-          message.value = '';
+          message.value = "";
         }
       } catch (error) {
         telmsg.value = error.response.data;
@@ -146,12 +184,15 @@ export default {
 
     const compareAuthNumber = async () => {
       try {
-        const response = await axios.post(API.VERIFY_CODE, { ...userData.value, table: tableName.value });
+        const response = await axios.post(API.VERIFY_CODE, {
+          ...userData.value,
+          table: tableName.value,
+        });
         if (response.status === 200) {
           telmsg.value = response.data.message;
           isValidTelno.value = true;
           codeInputMode.value = false;
-          userData.value.authNumber = '';
+          userData.value.authNumber = "";
         }
       } catch (error) {
         telmsg.value = error.response.data;
@@ -162,10 +203,16 @@ export default {
       if (!validateInput(userData.value)) {
         return;
       }
+      const { userType } = userData.value;
       try {
-        const response = await axios.post(API.REGISTER_USER, { ...userData.value, table: tableName.value });
+        const response = await axios.post(API.REGISTER_USER, {
+          ...userData.value,
+          table: tableName.value,
+          userType: userType.value,
+        });
         if (response.status === 200) {
-          message.value = '사용자가 성공적으로 등록되었습니다.';
+          message.value = "사용자가 성공적으로 등록되었습니다.";
+          isValidTelno.value = false;
         }
       } catch (error) {
         handleError(error);
@@ -174,10 +221,6 @@ export default {
 
     const validateInput = (userData) => {
       const { password, userName, userType } = userData;
-      if (!isValidTelno.value) {
-        alert("전화번호 인증해 주세요.");
-        return false;
-      }
       if (!password || password.trim() === "") {
         alert("비밀번호를 입력해 주세요.");
         return false;
@@ -186,11 +229,22 @@ export default {
         alert("사용자 이름을 입력해 주세요.");
         return false;
       }
-      if (tableName.value != 'user' && (!userType || userType.trim() === "")) {
+      alert(userType.value);
+
+      if (
+        tableName.value == "admin" &&
+        (!userType.value || userType.value.trim() === "")
+      ) {
         alert("사용자 타입을 선택해 주세요.");
         return false;
       }
+
       return true;
+    };
+
+    const handleCancelSubmit = async () => {
+      isValidTelno.value = false;
+      codeInputMode.value = false;
     };
 
     const handleError = (error) => {
@@ -204,12 +258,12 @@ export default {
     };
 
     onMounted(() => {
-      const sessiontableName = sessionStorage.getItem('tableName');
+      const sessiontableName = sessionStorage.getItem("tableName");
       if (sessiontableName) {
         tableName.value = sessiontableName;
       }
-      if (tableName.value === 'user') {
-        isUserTable.value = true;
+      if (tableName.value === "admin") {
+        isAdmin.value = true;
       }
     });
 
@@ -217,17 +271,18 @@ export default {
       userData,
       message,
       telmsg,
-      isUserTable,
+      isAdmin,
       isValidTelno,
       codeInputMode,
       checkAuthNumber,
       checkTelNumber,
       compareAuthNumber,
-      adminTypesOptions: ADMIN_TYPES,
+      adminTypesOptions,
       handleTelnoCheck,
       handleSubmit,
+      handleCancelSubmit,
     };
-  }
+  },
 };
 </script>
 

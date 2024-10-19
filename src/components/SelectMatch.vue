@@ -1,6 +1,9 @@
 <template>
   <q-page class="common-container q-pa-md">
-    <q-list>
+    <div v-if="!matchArray || matchArray.length == 0">
+      현재 정보가 없습니다.
+    </div>
+    <q-list v-if="matchArray && matchArray.length > 0">
       <q-card
         v-for="(match, index) in matchArray"
         :key="index"
@@ -18,13 +21,17 @@
           <div>
             <strong>경기번호:</strong> {{ match.match_no }}<br />
             <strong>상태:</strong> {{ match.statusCode }}<br />
-            <strong>경기 일시:</strong> {{ match.start_date }}일 {{ match.start_time }} ~ {{ match.end_time }}<br />
-            <strong>입찰 기간:</strong> {{ formatTimeToLocal(match.bid_open_datetime) }} ~ {{ formatTimeToLocal(match.bid_close_datetime) }}
+            <strong>경기 일시:</strong> {{ match.start_date }}일
+            {{ match.start_time }} ~ {{ match.end_time }}<br />
+            <strong>입찰 기간:</strong>
+            {{ formatTimeToLocal(match.bid_open_datetime) }} ~
+            {{ formatTimeToLocal(match.bid_close_datetime) }}
           </div>
 
           <q-separator spaced v-if="isAdmin" />
           <div v-if="isAdmin">
-            <strong>승인 상태:</strong> {{ match.approved === 'Y' ? '승인' : '미승인' }}
+            <strong>승인 상태:</strong>
+            {{ match.approved === "Y" ? "승인" : "미승인" }}
           </div>
         </q-card-section>
       </q-card>
@@ -36,70 +43,59 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
-import { url, API, messageCommon } from '../utils/messagesAPIs';
-import { formatTimeToLocal } from '../utils/commonFunction.js';
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+import { url, API, messageCommon } from "../utils/messagesAPIs";
+import { formatTimeToLocal } from "../utils/commonFunction.js";
 
 export default {
   setup(props, { emit }) {
-    const sessionUserId = ref('');
-    const sessionUserType = ref('');
+    const sessionTelno = ref("");
+    const sessionUserType = ref("");
     const isAdmin = ref(false);
-    const tableName = ref('');
+    const tableName = ref("");
     const matchArray = ref([]);
     const selectedButton = ref(null);
-    const message = ref('');
+    const message = ref("");
     const router = useRouter();
-
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, { withCredentials: true });
-        if (response.status === 200) {
-          sessionUserId.value = response.data.userId;
-          sessionUserType.value = response.data.userType;
-        }
-      } catch (error) {
-        alert('로그인이 필요합니다.');
-      }
-    };
 
     const fetchMatches = async () => {
       let api;
-      if (tableName.value === 'user') {
-        api = 'GET_ALL_APPROVED_MATCHES';
-      } else if (tableName.value === 'admin') {
-        api = 'GET_ALLMATCHES';
+      if (tableName.value === "user") {
+        api = "GET_ALL_APPROVED_MATCHES";
+      } else if (tableName.value === "admin") {
+        api = "GET_ALLMATCHES";
       }
       try {
         const response = await axios.get(API[api], {
           params: {
-            userId: sessionUserId.value,
+            telno: sessionTelno.value,
             userType: sessionUserType.value,
           },
         });
         if (response.status === 200) {
           matchArray.value = response.data.map((match) => {
-            const { bid_open_datetime, bid_close_datetime, bid_open_status } = match;
+            const { bid_open_datetime, bid_close_datetime, bid_open_status } =
+              match;
 
-            let statusCode = '';
-            if (bid_open_status === 'F') {
-              statusCode = '낙찰종료';
+            let statusCode = "";
+            if (bid_open_status === "F") {
+              statusCode = "낙찰종료";
             } else if (bid_open_datetime && bid_close_datetime) {
               const bidOpenDate = new Date(bid_open_datetime);
               const bidCloseDate = new Date(bid_close_datetime);
               const now = new Date();
 
               if (now < bidOpenDate) {
-                statusCode = '입찰 시작 전';
+                statusCode = "입찰 시작 전";
               } else if (now > bidCloseDate) {
-                statusCode = '입찰 종료';
+                statusCode = "입찰 종료";
               } else {
-                statusCode = '입찰 중';
+                statusCode = "입찰 중";
               }
             } else {
-              statusCode = '상태 정보 없음';
+              statusCode = "상태 정보 없음";
             }
 
             return {
@@ -115,20 +111,34 @@ export default {
 
     const handleSelect = (index) => {
       const match = matchArray.value[index];
-      sessionStorage.setItem('matchNumber', match.match_no);
+      sessionStorage.setItem("matchNumber", match.match_no);
       selectedButton.value = selectedButton.value === index ? null : index;
-      message.value = '';
-      emit('update-status', {
+      message.value = "";
+      emit("update-status", {
         isLoggedIn: true,
         hasSelectedMatch: true,
       });
-      let urltogo;
-      if (tableName.value === 'user') {
-        urltogo = 'bid';
-      } else if (tableName.value === 'admin') {
-        urltogo = 'bidresults';
+      if (tableName.value === "user") {
+        router.push(url.bidSeats);
+      } else if (tableName.value === "admin") {
+        router.push(url.bidResults);
       }
-      router.push(url[urltogo]);
+    };
+
+    const fetchSessionUserId = async () => {
+      try {
+        const response = await axios.get(API.GET_SESSION_USERID, {
+          withCredentials: true,
+        });
+
+        if (response.data == "200") {
+          sessionTelno.value = response.data.telno;
+          sessionUserType.value = response.data.userType;
+        }
+      } catch (error) {
+        alert("로그인이 필요합니다.");
+        router.push(url.adminLogin);
+      }
     };
 
     const handleError = (error) => {
@@ -142,19 +152,20 @@ export default {
     };
 
     onMounted(async () => {
-      const sessiontableName = sessionStorage.getItem('tableName');
+      const sessiontableName = sessionStorage.getItem("tableName");
       if (sessiontableName) {
         tableName.value = sessiontableName;
       }
-      if (tableName.value === 'admin') {
+      if (tableName.value === "admin") {
         isAdmin.value = true;
       }
+
       await fetchSessionUserId();
       await fetchMatches();
     });
 
     return {
-      sessionUserId,
+      sessionTelno,
       sessionUserType,
       isAdmin,
       matchArray,

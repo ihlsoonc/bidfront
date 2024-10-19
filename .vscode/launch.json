@@ -11,5 +11,13 @@
             "url": "http://localhost:9000",
             "webRoot": "${workspaceFolder}"
         }
+        {
+          "type": "java",
+          "request": "launch",
+          "name": "Java Program",
+          "mainClass": "com.bidsystem.bid.BidApplication",
+          "vmArgs": "-Dfile.encoding=UTF-8"
+      }
     ]
+
 }
