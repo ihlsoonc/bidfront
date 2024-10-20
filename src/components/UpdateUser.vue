@@ -1,6 +1,6 @@
 <template>
   <q-page class="common-container q-pa-md">
-    <h5>사용자 조회 및 수정</h5>
+    <h6>사용자 조회 및 수정</h6>
 
     <!-- 사용자 조회 폼 -->
     <q-form @submit.prevent="handleSearch">
@@ -25,7 +25,8 @@
         :readonly="updateMode"
         class="q-mb-md"
       />
-      <div class="messagebox">{{ passwordMsg }}</div>
+      <q-banner v-if="message" type="info">{{ message }}</q-banner>
+      <br />
       <q-btn type="submit" label="조회" color="primary" class="full-width" />
     </q-form>
 
@@ -107,8 +108,6 @@
         />
       </q-form>
     </div>
-
-    <div class="messagebox">{{ message }}</div>
   </q-page>
 </template>
 
@@ -225,6 +224,7 @@ const validateInput = (userData) => {
 
 const handleReset = () => {
   updateMode.value = false;
+  message.value = "";
 };
 
 const handleError = (error) => {

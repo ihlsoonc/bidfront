@@ -14,13 +14,14 @@
         bordered
       >
         <q-card-section>
-          <div class="text-h6">{{ match.match_name }} {{ match.round }}</div>
-          <div>{{ match.venue_name }}</div>
+          <div class="text-h6">
+            {{ match.match_name }} {{ match.round }} : {{ match.venue_name }}
+          </div>
           <q-separator spaced />
 
           <div>
-            <strong>경기번호:</strong> {{ match.match_no }}<br />
-            <strong>상태:</strong> {{ match.statusCode }}<br />
+            <strong>경기번호:</strong> {{ match.match_no }} {{ match.statusCode
+            }}<br />
             <strong>경기 일시:</strong> {{ match.start_date }}일
             {{ match.start_time }} ~ {{ match.end_time }}<br />
             <strong>입찰 기간:</strong>

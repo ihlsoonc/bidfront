@@ -15,9 +15,9 @@
         <q-item>
           <q-item-section>
             <q-item-label>
-              경기번호 ({{ bidStatus.match_no }}) {{ matchRound }}
-              <span class="bold-text">{{ openStatus }}</span>
+              <span class="bold-text"> {{ matchRound }} {{ openStatus }}</span>
             </q-item-label>
+            <q-item-label> (경기번호 {{ bidStatus.match_no }}) </q-item-label>
             <q-item-label>경기 시간</q-item-label>
             {{ bidStatus.start_date }}일 {{ bidStatus.start_time }} ~
             {{ bidStatus.end_time }}

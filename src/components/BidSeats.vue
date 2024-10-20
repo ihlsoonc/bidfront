@@ -5,7 +5,7 @@
     <div class="seat-list">
       <q-card class="q-pa-md q-mb-md">
         <q-card-section>
-          <q-banner class="text-center">입찰 및 낙찰 현황</q-banner>
+          <h6>입찰 및 낙찰 현황</h6>
         </q-card-section>
 
         <!-- 입찰 좌석이 없는 경우 -->
@@ -15,64 +15,71 @@
 
         <!-- 입찰 좌석이 있는 경우 -->
         <q-card-section v-else>
-          <q-list bordered v-if="seatBidArray && seatBidArray.length > 0">
-            <q-item
-              v-for="(seat, index) in seatBidArray"
-              :key="index"
-              class="seat-box"
-            >
-              <q-item-section>
-                좌석 번호: {{ seat.seat_no }} ({{ seat.row_no }} 열
-                {{ seat.col_no }}번)
-                <q-badge class="bold-text">{{ seat.bidWonStatus }}</q-badge>
-              </q-item-section>
-              <q-item-section>
-                입찰 금액: {{ seat.bid_amount.toLocaleString() }}원
-                {{ formatTimeToLocal(seat.bid_at) }}
-              </q-item-section>
-              <q-item-section>
-                현재 최고가:
-                {{ (seat.highest_bid_amount || 0).toLocaleString() }}원 결제현황
-                : {{ seat.paidStatus }} {{ seat.bid_pay_method }}
-              </q-item-section>
+          <q-table
+            :rows="seatBidArray"
+            :columns="tableColumns"
+            row-key="seat_no"
+            flat
+          >
+            <!-- 좌석 번호, 열, 컬럼 -->
+            <template v-slot:body="props">
+              <!-- 좌석 정보 -->
+              <q-tr :props="props">
+                <q-td>
+                  {{ props.row.seat_no }} ({{ props.row.row_no }} 열
+                  {{ props.row.col_no }}번)
+                </q-td>
+                <q-td>
+                  {{ props.row.bid_amount.toLocaleString() }}원
+                  {{ formatTimeToLocal(props.row.bid_at) }}
+                </q-td>
+                <q-td>
+                  {{ (props.row.highest_bid_amount || 0).toLocaleString() }}원
+                </q-td>
+                <q-td>
+                  <q-btn
+                    v-if="props.row.historyButtonEnabled"
+                    @click="toggleHistory(props.row)"
+                    :color="
+                      selectedHistoryButton === props.row.seat_no
+                        ? 'primary'
+                        : 'secondary'
+                    "
+                    size="xs"
+                    :icon="
+                      selectedHistoryButton === props.row.seat_no
+                        ? 'keyboard_arrow_up'
+                        : 'keyboard_arrow_down'
+                    "
+                  >
+                    <q-badge
+                      :color="
+                        selectedHistoryButton === props.row.seat_no
+                          ? 'primary'
+                          : 'secondary'
+                      "
+                      >이력 {{ props.row.bidHistory.length }}건</q-badge
+                    >
+                  </q-btn>
+                </q-td>
+              </q-tr>
 
-              <q-item-section
-                v-if="seat.bidHistory && seat.historyButtonEnabled"
-              >
-                <q-btn
-                  @click="showHistory(index)"
-                  :color="
-                    selectedHistoryButton === index ? 'primary' : 'secondary'
-                  "
-                  label="이력보기"
-                  :icon="
-                    selectedHistoryButton === index
-                      ? 'keyboard_arrow_up'
-                      : 'keyboard_arrow_down'
-                  "
-                >
-                  <q-badge>{{ seat.bidHistory.length }}</q-badge>
-                </q-btn>
-              </q-item-section>
-              <div>
-                <!-- 입찰 이력은 두 개 이상일 때만 표시 -->
-                <q-expansion-item
-                  v-model="seat.historyShow"
-                  group="history"
-                  label="입찰 이력"
-                  icon="history"
-                >
+              <!-- 입찰 이력 (해당 행 아래 표시) -->
+              <q-tr v-if="props.row.historyShow">
+                <q-td colspan="4">
                   <q-item
-                    v-for="(history, hIndex) in seat.bidHistory"
+                    v-for="(history, hIndex) in props.row.bidHistory"
                     :key="hIndex"
                   >
-                    {{ history.bid_amount.toLocaleString() }}원 -
-                    {{ formatTimeToLocal(history.bid_at) }}
+                    <q-item-section>
+                      {{ history.bid_amount.toLocaleString() }}원 -
+                      {{ formatTimeToLocal(history.bid_at) }}
+                    </q-item-section>
                   </q-item>
-                </q-expansion-item>
-              </div>
-            </q-item>
-          </q-list>
+                </q-td>
+              </q-tr>
+            </template>
+          </q-table>
         </q-card-section>
       </q-card>
     </div>
@@ -81,17 +88,17 @@
     <q-card class="q-pa-md q-mb-md">
       <q-card-section>
         <div>
-          낙찰가격 합계:{{ totalWinAmount.toLocaleString() }}원
+          낙찰금액 합계: {{ totalWinAmount.toLocaleString() }}원
           {{ totalWinCount }}건
         </div>
-        <div>입찰가격 합계: {{ totalBidAmount.toLocaleString() }}원</div>
+        <div>입찰금액 합계: {{ totalBidAmount.toLocaleString() }}원</div>
       </q-card-section>
       <q-card-section>
         <q-btn
           @click="handlePaySubmit"
-          :disable="isApproved || totalWinAmount == 0"
+          :disable="isApproved || totalWinAmount === 0"
           color="primary"
-          label="결제 진행"
+          label="낙찰 내용 결제"
         />
         <q-btn
           @click="handleSelectVenue"
@@ -171,17 +178,16 @@ export default {
     const sessionUserName = ref("");
     const localSessionUserName = ref("");
     const matchNumber = ref(0);
-
-    const bidStatus = ref({});
     const bidOpen = "O";
     const isClosedBid = ref(false);
     const isApproved = ref(false);
     const isUser = ref(true);
-
-    const selectedSeats = ref([]);
     const selectedHistoryButton = ref(-1);
+
     const seatBidArray = ref([]);
     const allSeatBidArray = ref([]);
+    const selectedSeats = ref([]);
+
     const clickCount = ref(0);
     const minBidAmount = ref(0);
     const bidAmounts = ref({});
@@ -189,9 +195,21 @@ export default {
     const totalBidAmount = ref(0);
     const totalWinAmount = ref(0);
     const totalWinCount = ref(0);
-
+    const bidStatus = ref({});
     const paymentData = ref({});
     const message = ref("");
+    const tableColumns = ref([
+      {
+        name: "seat_no",
+        required: true,
+        label: "좌석번호",
+        align: "left",
+        field: (row) => row.seat_no,
+      },
+      { name: "bid_amount", label: "입찰 금액", align: "left" },
+      { name: "highest_bid_amount", label: "현재 최고가", align: "left" },
+      { name: "bidHistory", label: "이력", align: "left" },
+    ]);
 
     const fetchBidStatus = async (localSessionMatchNumber) => {
       try {
@@ -234,6 +252,8 @@ export default {
             historyShow: false,
           };
         });
+
+        console.log("====================", seatBidArray.value);
         // 총 입찰 금액을 계산
         totalBidAmount.value = seatBidArray.value.reduce(
           (sum, seat) => sum + (seat.bid_amount || 0),
@@ -290,16 +310,12 @@ export default {
       }
     };
 
-    const showHistory = (index) => {
-      // selectedHistoryButton 값을 사용하여 입찰 이력을 다시 열거나 닫음
-      const seat = seatBidArray.value[index];
-      if (selectedHistoryButton.value === index) {
-        // 이미 열려있으면 다시 닫음 (undo 개념)
+    const toggleHistory = (seat) => {
+      if (selectedHistoryButton.value === seat.seat_no) {
         seat.historyShow = false;
-        selectedHistoryButton.value = -1; // 닫음
+        selectedHistoryButton.value = -1;
       } else {
-        // 이력을 다시 열기 (redo 개념)
-        selectedHistoryButton.value = index; // 열기
+        selectedHistoryButton.value = seat.seat_no;
         seat.historyShow = true;
       }
     };
@@ -555,7 +571,6 @@ export default {
         if (response.status == "200") {
           sessionTelno.value = response.data.telno;
           sessionUserName.value = response.data.userName;
-          alert(sessionUserName.value);
           sessionStorage.setItem("userName", sessionUserName.value);
         }
       } catch (error) {
@@ -583,31 +598,36 @@ export default {
       }
     };
 
+    const fetchData = async () => {
+      try {
+        await fetchBidStatus(matchNumber.value);
+        await fetchMyLast();
+        await fetchMyBids();
+        await fetchAllBids();
+      } catch (error) {
+        handleError(error);
+      }
+    };
+
     onMounted(async () => {
       const localSessionMatchNumber = sessionStorage.getItem("matchNumber");
-      if (localSessionMatchNumber) {
-        matchNumber.value = localSessionMatchNumber;
-      } else {
+      if (!localSessionMatchNumber) {
         alert("경기를 먼저 선택해주세요.");
-        router.push(url.selectMatchUser);
+        return router.push(url.selectMatchUser);
       }
+
+      matchNumber.value = localSessionMatchNumber;
       const queryString = window.location.search;
       const params = new URLSearchParams(queryString);
 
-      // 특정 파라미터 값 가져오기
       if (params.has("telno")) {
         sessionTelno.value = params.get("telno");
-        alert("returned from pgpost" + sessionTelno.value);
-        const localSessionUserName = sessionStorage.getItem("userName");
-        alert("name in local " + localSessionUserName);
-        restoreSession(sessionTelno.value, localSessionUserName);
+        await restoreSession(sessionTelno.value, localSessionUserName.value);
       } else {
         await fetchSessionUserId();
       }
-      await fetchBidStatus(matchNumber.value);
-      await fetchMyLast();
-      await fetchMyBids();
-      await fetchAllBids();
+
+      await fetchData();
     });
 
     return {
@@ -632,11 +652,15 @@ export default {
       formatTimeToLocal,
       handleSeatClick,
       handleBidSubmit,
-      showHistory,
+      toggleHistory,
       handleBidAmountChange,
       handlePaySubmit,
       handleSelectVenue,
       message,
+      selectedHistoryButton,
+      tableColumns,
+      paymentData,
+      clickCount,
     };
   },
 };

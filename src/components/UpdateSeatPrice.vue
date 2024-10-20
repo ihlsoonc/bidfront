@@ -3,34 +3,32 @@
     <BidStatus :bidStatus="bidStatus" />
 
     <div class="flexcolum-container q-gutter-md">
-      <div v-if="seatUpdateMode" class="q-mt-md">
+      <div v-if="seatUpdateMode" class="q-mt-md q-gutter-xs row">
         <q-btn
           @click="handleCreateNewArray"
           label="좌석 일괄 생성"
           color="primary"
           flat
-          class="full-width q-mb-sm"
+          class="col q-mb-sm"
         />
         <q-btn
           @click="handleSubmit"
           label="작업 내용 제출"
           color="secondary"
           flat
-          class="full-width q-mb-sm"
+          class="col q-mb-sm"
         />
         <q-btn
           @click="handleAddRow"
           label="새로운 행 추가"
           color="tertiary"
           flat
-          class="full-width"
+          class="col"
         />
       </div>
 
       <div class="q-mt-md">
-        <q-title level="h6">좌석별 최소 입찰 가격</q-title>
         <q-banner v-if="message" class="q-mt-md">{{ message }}</q-banner>
-
         <q-dialog v-model="showPrompt">
           <q-card>
             <q-card-section>
@@ -71,26 +69,83 @@
           </q-card>
         </q-dialog>
 
-        <!-- 좌석 입력 테이블 -->
-        <q-table
-          :rows="seatArray"
-          :columns="columns"
-          row-key="seat_no"
-          class="q-mt-md"
-          hide-bottom
-        >
-          <template v-slot:body-cell-actions="props">
-            <q-td align="right">
-              <q-btn
-                v-if="seatUpdateMode"
-                @click="handleRemoveRow(props.row)"
-                label="삭제"
-                color="negative"
-                flat
-              />
-            </q-td>
-          </template>
-        </q-table>
+        <div v-if="!seatArray || seatArray.length === 0" class="q-mb-md">
+          <q-banner type="warning"
+            >좌석 일괄 생성 버튼을 눌러 가격을 입력하여 주세요.</q-banner
+          >
+        </div>
+
+        <div v-else>
+          <!-- 좌석 입력 테이블 -->
+          <q-title level="h6">좌석별 최소 입찰 가격</q-title>
+          <q-table
+            :rows="seatArray"
+            :columns="columns"
+            row-key="seat_no"
+            class="q-mt-md"
+          >
+            <!-- 좌석 번호 입력 -->
+            <template v-slot:body-cell-seat_no="props">
+              <q-td :props="props">
+                <q-input
+                  v-model="props.row.seat_no"
+                  dense
+                  type="text"
+                  @input="handleInputChange(props.row, 'seat_no', $event)"
+                  readonly
+                />
+              </q-td>
+            </template>
+
+            <!-- 열 번호 입력 -->
+            <template v-slot:body-cell-row_no="props">
+              <q-td :props="props">
+                <q-input
+                  v-model="props.row.row_no"
+                  dense
+                  type="text"
+                  @input="handleInputChange(props.row, 'row_no', $event)"
+                />
+              </q-td>
+            </template>
+
+            <!-- 컬럼 번호 입력 -->
+            <template v-slot:body-cell-col_no="props">
+              <q-td :props="props">
+                <q-input
+                  v-model="props.row.col_no"
+                  dense
+                  type="text"
+                  @input="handleInputChange(props.row, 'col_no', $event)"
+                />
+              </q-td>
+            </template>
+
+            <!-- 최소 입찰가 입력 -->
+            <template v-slot:body-cell-seat_price="props">
+              <q-td :props="props">
+                <q-input
+                  v-model.number="props.row.seat_price"
+                  dense
+                  type="number"
+                  @input="handleInputChange(props.row, 'seat_price', $event)"
+                />
+              </q-td>
+            </template>
+
+            <!-- 삭제 버튼 -->
+            <template v-slot:body-cell-actions="props">
+              <q-td :props="props" align="right">
+                <q-btn
+                  @click="handleRemoveRow(props.row)"
+                  label="삭제"
+                  color="negative"
+                  flat
+                />
+              </q-td>
+            </template>
+          </q-table>
+        </div>
       </div>
     </div>
   </q-page>
@@ -133,14 +188,14 @@ export default {
       },
       {
         name: "row_no",
-        label: "열 번호",
+        label: "열",
         align: "left",
         field: "row_no",
         sortable: true,
       },
       {
         name: "col_no",
-        label: "컬럼 번호",
+        label: "컬럼",
         align: "left",
         field: "col_no",
         sortable: true,
@@ -165,10 +220,9 @@ export default {
         if (response.status === 200 && response.data) {
           bidStatus.value = response.data;
 
-          if (bidStatus.value.bidStatusCode === "N") {
-            seatUpdateMode.value = true;
-            alert("업데이트 가능여부. :" + seatUpdateMode.value);
-          }
+          // if (bidStatus.value.bidStatusCode === "N") {
+          seatUpdateMode.value = true;
+          // }
         }
       } catch (error) {
         handleError(error);
@@ -194,24 +248,51 @@ export default {
       seatArray.value[index][field] = value;
     };
 
-    const handleRemoveRow = (index) => {
+    const handleRemoveRow = (row) => {
+      const seat_no = row.seat_no;
+
+      // 좌석 번호가 없거나 빈 공간인 경우
+      if (!seat_no || seat_no.trim() === "") {
+        const index = seatArray.value.indexOf(row);
+        if (index !== -1) {
+          seatArray.value.splice(index, 1); // seatArray에서만 제거
+          console.log("+++++++++++++++++++++++", seatArray.value);
+        }
+        return;
+      }
+
+      // 삭제 확인
       const confirmDelete = window.confirm(
-        "정말로 이 좌석을 삭제하시겠습니까?"
+        "정말로 이 좌석을 삭제하시겠습니까? 좌석번호에 결번이 발생할 수 있습니다."
       );
+
       if (confirmDelete) {
-        seatArrayToDelete.value.push(seatArray.value[index].seat_no);
-        seatArray.value.splice(index, 1);
+        seatArrayToDelete.value.push(seat_no); // 유효한 seat_no만 toDelete에 추가
+        const index = seatArray.value.indexOf(row);
+        if (index !== -1) {
+          seatArray.value.splice(index, 1); // seatArray에서도 제거
+        }
       }
     };
 
     const handleAddRow = () => {
+      // seatArray에서 가장 큰 seat_no 찾기
+      const lastSeatNo =
+        seatArray.value.length > 0
+          ? Math.max(
+              ...seatArray.value.map((seat) => Number(seat.seat_no) || 0)
+            )
+          : 0;
+
+      // 새 좌석 객체 생성, seat_no는 마지막 좌석 번호 + 1로 설정
       const newSeat = {
         row_no: "",
         col_no: "",
-        seat_no: "",
-        seat_price: "",
-        matchNumber: "",
+        seat_no: String(lastSeatNo + 1), // 좌석 번호를 마지막 번호 + 1로 설정
+        seat_price: 0,
+        matchNumber: matchNumber.value,
       };
+
       seatArray.value = [...seatArray.value, newSeat];
     };
 
@@ -228,6 +309,7 @@ export default {
           showPrompt.value = true;
         }
       }
+      message.value = "";
     };
 
     const handleSeatCountSubmit = () => {
@@ -248,6 +330,11 @@ export default {
     };
 
     const handleSubmit = async () => {
+      const invalidSeats = seatArray.value.filter(
+        (seat) =>
+          !seat.seat_no || seat.seat_no.trim() === "" || seat.seat_price <= 0
+      );
+
       const updatedSeatArray = seatArray.value.filter((seat) => {
         const originalSeat = originalSeats.value.find(
           (s) => s.seat_no === seat.seat_no
@@ -260,6 +347,13 @@ export default {
         );
       });
 
+      // 유효하지 않은 좌석이 있으면 경고 표시
+      if (invalidSeats.length > 0) {
+        alert(
+          "좌석 번호가 없거나 가격이 0인 항목이 있습니다. 확인 후 다시 시도해주세요."
+        );
+        return;
+      }
       if (updatedSeatArray.length === 0) {
         alert("변경된 내용이 없습니다.");
         return;

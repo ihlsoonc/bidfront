@@ -1,11 +1,7 @@
 <template>
   <q-page class="common-container">
     <q-layout view="lHh lpr lFf">
-      <q-header>
-        <q-toolbar>
-          <q-title>경기 정보</q-title>
-        </q-toolbar>
-      </q-header>
+      <h6>경기 정보</h6>
 
       <q-page-container>
         <q-page class="q-pa-md">
@@ -23,12 +19,6 @@
             flat
             dense
           >
-            <!-- <template v-slot:body-cell-approved="props">
-              <q-td :props="props">
-                {{ props.row.approved === "Y" ? "승인" : "미승인" }}
-              </q-td>
-            </template> -->
-
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
                 <q-btn
@@ -46,8 +36,10 @@
                   flat
                 />
                 <q-btn
-                  label="다운로드"
+                  label="첨부 다운로드"
                   color="secondary"
+                  :disable="!props.row.filename_attached"
+                  icon="download"
                   @click="downloadFile(props.row.filename_attached)"
                   flat
                 />
@@ -67,7 +59,7 @@
               <q-form class="q-gutter-md q-gutter-sm-md-up">
                 <q-input
                   v-model="matchData.matchNumber"
-                  label="경기 번호"
+                  label="번호"
                   type="number"
                   disable
                   class="col-xs-12 col-sm-6"

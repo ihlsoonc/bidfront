@@ -6,7 +6,7 @@
     <q-header elevated>
       <q-toolbar>
         <q-btn flat round dense icon="menu" @click="toggleLeftDrawer" />
-        <q-toolbar-title>입찰 제출 및 결제 시스템</q-toolbar-title>
+        <q-toolbar-title>입찰 및 결제 시스템</q-toolbar-title>
         <q-btn
           flat
           round

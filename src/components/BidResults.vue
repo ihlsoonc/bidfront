@@ -42,19 +42,12 @@
           class="full-width"
         />
       </div>
-      <div
-        v-if="countSelectedSeats > 0"
-        class="selected-seat-headers q-gutter-md"
-      >
+      <div v-if="countSelectedSeats > 0" class="colomnflex-container">
         <div class="spaced-span">
-          선택된 좌석수&nbsp;: {{ countSelectedSeats }}개&nbsp;
+          선택된 좌석수&nbsp;: {{ countSelectedSeats }}개&nbsp; 입찰
+          좌석수&nbsp;: {{ countbiddedSeats }}개&nbsp; 입찰금액 합계:
+          {{ bidTotal }}원 &nbsp; 합계 : {{ minBidAmount }}원
         </div>
-        <div class="spaced-span">
-          입찰 좌석수&nbsp;: {{ countbiddedSeats }}개&nbsp;
-        </div>
-        <div class="spaced-span">입찰금액 합계: {{ bidTotal }}원</div>
-        &nbsp;
-        <div>합계 : {{ minBidAmount }}원</div>
       </div>
       <div v-if="countSelectedSeats > 0">
         <!-- 입찰금액입력란 및 제출결과 필드 Show -->
@@ -143,7 +136,7 @@ export default {
           clickCount.value += 1;
         } else {
           // 좌석 데이터를 찾지 못한 경우
-          alert("해당 좌석 정보를 찾을 수 없습니다.");
+          alert("선택한 좌석의 최저입찰가가 없습니다. 관리자에게 문의하세요.");
           return;
         }
       }

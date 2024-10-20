@@ -7,7 +7,7 @@
     />
     <div class="seat-grid">
       <q-btn
-        v-for="seatNumber in 23"
+        v-for="seatNumber in 45"
         :key="seatNumber"
         :label="`${seatNumber}번${getSeatInfo(seatNumber).highestBid}원\n${
           getSeatInfo(seatNumber).bidCount

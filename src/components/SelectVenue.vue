@@ -20,7 +20,7 @@
               <div class="text-h6">{{ venue.venue_name }}</div>
             </q-card-section>
             <q-img
-              :src="`/src/assets/static/images/venues/${venue.venue_img_file}`"
+              :src="getImageUrl(venue.venue_img_file)"
               :alt="venue.venue_name"
               class="venue-image"
               @click="selectVenue(index)"
@@ -55,6 +55,9 @@ export default {
       } catch (error) {
         handleError(error);
       }
+    };
+    const getImageUrl = (fileName) => {
+      return new URL(`/images/venues/${fileName}`, import.meta.url).href;
     };
 
     // 경기장 선택 처리
@@ -96,6 +99,7 @@ export default {
 
     return {
       venueArray,
+      getImageUrl,
       selectedVenueIndex,
       selectVenue,
       selectedVenue,

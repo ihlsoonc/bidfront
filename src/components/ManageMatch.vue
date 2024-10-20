@@ -1,5 +1,5 @@
 <template>
-  <q-page padding>
+  <q-page class="common-container">
     <q-banner v-if="!matchArray || matchArray.length === 0" type="warning">
       현재 정보가 없습니다.
     </q-banner>
@@ -17,10 +17,12 @@
         <template v-slot:body-cell-actions="props">
           <q-td>
             <q-btn
-              @click="handleDownload(props.row)"
+              label="첨부 다운로드"
+              color="secondary"
+              :disable="!props.row.filename_attached"
+              icon="download"
+              @click="downloadFile(props.row.filename_attached)"
               flat
-              label="첨부보기"
-              class="q-mr-sm"
             />
             <q-btn
               v-if="props.row.approved !== 'Y'"
@@ -159,6 +161,7 @@
             class="col-12 col-md-6"
           />
         </div>
+        <br />
         <div class="row q-col-gutter-md">
           <q-btn
             type="submit"
@@ -208,11 +211,11 @@ const matchData = ref({
   fileName: "",
 });
 const columns = [
-  { name: "match_no", label: "경기 번호", field: "match_no" },
+  { name: "match_no", label: "번호", field: "match_no" },
   { name: "venue_name", label: "경기장", field: "venue_name" },
   { name: "match_name", label: "경기명", field: "match_name" },
   { name: "round", label: "라운드", field: "round" },
-  { name: "start_date", label: "경기일", field: "start_date" },
+  { name: "start_date", label: "경기 일자", field: "start_date" },
   { name: "start_time", label: "시작 시간", field: "start_time" },
   { name: "end_time", label: "종료 시간", field: "end_time" },
   { name: "bidLable", label: "입찰 여부", field: "bidLable" },
@@ -387,35 +390,20 @@ const handleFileUpload = async () => {
   }
 };
 
-const handleDownload = async (index) => {
+const downloadFile = async (fileName) => {
+  if (!fileName) {
+    alert("첨부화일이 없습니다.");
+    return;
+  }
   try {
-    let fileName = "";
-    // 파일 다운로드 요청
-
-    if (index >= 0) {
-      const match = matchArray.value[index];
-      fileName = match.filename_attached;
-    } else {
-      fileName = matchData.value.fileName;
-      alert(fileName);
-    }
-    if (!fileName) {
-      alert("첨부화일이 없습니다.");
-      return;
-    }
     const response = await axios.get(API.DOWNLOAD_MATCHINFO, {
-      params: { fileName: fileName }, // 쿼리 파라미터로 파일 이름 전달
-      responseType: "blob", // 응답 타입을 blob으로 설정
-      headers: {
-        "Content-Type": "application/octet-stream",
-        // 필요한 경우 인증 헤더 추가
-      },
+      params: { fileName },
+      responseType: "blob",
     });
-    // 파일 데이터를 Blob 형태로 변환
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", fileName); // 파일 이름을 지정
+    link.setAttribute("download", fileName);
     document.body.appendChild(link);
     link.click();
     link.remove();

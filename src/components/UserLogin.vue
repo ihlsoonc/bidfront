@@ -165,9 +165,7 @@ export default {
         if (response.status === 200) {
           sessionTelno.value = response.data.telno;
           sessionUserName.value = response.data.userName;
-          message.value = `${sessionUserName.value}님은 로그인 상태입니다.`;
           emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
-          alert(message.value);
         } else {
           message.value = `로그인 해주세요.`;
           resetSetting();

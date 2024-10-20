@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md">
+  <q-page class="common-container">
     <q-card class="q-pa-md q-mb-lg" flat bordered>
       <q-card-section>
         <div v-if="!venueArray || venueArray.length === 0" class="q-mb-md">
@@ -13,6 +13,7 @@
             :columns="columns"
             row-key="venue_cd"
             flat
+            dense
           >
             <template v-slot:body-cell-actions="props">
               <q-td align="center">
@@ -60,7 +61,7 @@
       <q-form @submit.prevent="handleSubmit">
         <q-input
           v-model="venueData.venueCd"
-          label="경기장 코드"
+          label="코드"
           :disable="updateInputMode || deleteConfirmMode"
           maxlength="3"
           class="q-mb-md"

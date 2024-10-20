@@ -1,13 +1,14 @@
 <template>
   <div class="common-container">
     <h6 style="text-align: center">선택 좌석 상세 정보</h6>
-    <table class="input-table">
+    <table>
       <thead>
         <tr>
           <th>좌석 번호</th>
           <th>좌석 가격</th>
           <th>총 입찰자 수</th>
           <th>최고 입찰 금액</th>
+          <th>최소 입찰 금액</th>
           <!-- isUser가 true일 때만 입찰 금액과 제출 결과 컬럼을 보여줍니다 -->
           <th v-if="isUser">입찰 금액</th>
           <th v-if="isUser">비고</th>
@@ -18,13 +19,8 @@
           <td>{{ seat.seat_no }}번 : {{ seat.row_no }}열 {{ seat.col_no }}</td>
           <td>{{ seat.seat_price }}원</td>
           <td>{{ seat.total_bidders }}명</td>
-          <td>
-            {{
-              seat.current_bid_amount > 0
-                ? seat.current_bid_amount
-                : seat.seat_price
-            }}원
-          </td>
+          <td>{{ seat.current_bid_amount }}원</td>
+          <td>{{ seat.seat_price }}원</td>
           <!-- isUser이나 bid 종료시에는 입찰 제출 버튼 diable -->
           <td v-if="isUser">
             <input

@@ -1,8 +1,8 @@
 const routes = [
-  {
-    path: "/",
-    redirect: "/admin", // 루트 경로로 접근 시 /admin으로 리다이렉트
-  },
+  // {
+  //   path: "/",
+  //   redirect: "/admin", // 루트 경로로 접근 시 /admin으로 리다이렉트
+  // },
   {
     path: "/",
     component: () => import("components/UserHome.vue"),
