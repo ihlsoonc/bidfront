@@ -591,17 +591,4 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.q-btn {
-  margin-top: 10px;
-}
-.q-banner {
-  margin-top: 20px;
-}
-.text-center {
-  text-align: center;
-}
-.q-mr-sm {
-  margin-right: 10px;
-}
-</style>
+<style scoped></style>

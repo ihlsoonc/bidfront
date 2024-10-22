@@ -1,36 +1,33 @@
 <template>
-  <q-page class="common-container q-pa-md">
-    <div class="columnflex-container q-gutter-md">
-      <BidStatus :bidStatus="bidStatus" />
-      <div v-if="message" class="q-message q-pa-md bg-negative text-white">
-        {{ message }}
-      </div>
-      <div class="buttons-container">
-        <q-option-group
-          inline
-          :options="radioOptions"
-          v-model="selectedAction"
-          @update:model-value="handleActionChange"
-          class="q-mt-sm"
-        />
-      </div>
-
-      <!-- SeatMap 컴포넌트 -->
-      <SeatMap
-        :selectedSeats="selectedSeats"
-        @seatClick="handleSeatClick"
-        :disabled="isClosedBid"
-        :seatBidArray="allSeatBidArray"
-        class="seatmap-container"
-      />
-      <q-btn
-        label="데이터 다시 불러오기"
-        @click="handleRefresh"
-        color="primary"
-        class="q-mt-md full-width"
-        flat
+  <q-page class="common-container">
+    <BidStatus :bidStatus="bidStatus" />
+    <div v-if="message" class="q-message q-pa-md bg-negative text-white">
+      {{ message }}
+    </div>
+    <div class="buttons-container">
+      <q-option-group
+        inline
+        :options="radioOptions"
+        v-model="selectedAction"
+        @update:model-value="handleActionChange"
+        class="q-mt-sm"
       />
     </div>
+
+    <!-- SeatMap 컴포넌트 -->
+    <SeatMap
+      :selectedSeats="selectedSeats"
+      @seatClick="handleSeatClick"
+      :disabled="isClosedBid"
+      :seatBidArray="allSeatBidArray"
+    />
+    <q-btn
+      label="데이터 다시 불러오기"
+      @click="handleRefresh"
+      color="primary"
+      class="q-mt-md full-width"
+      flat
+    />
 
     <div class="columnflex-container q-gutter-md">
       <div class="buttons-container" v-if="canAwardBid">
@@ -352,19 +349,6 @@ export default {
 </script>
 
 <style scoped>
-.columnflex-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.buttons-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
 .spaced-span {
   margin-right: 10px;
 }
@@ -381,26 +365,5 @@ export default {
 
 .full-width {
   width: 100%;
-}
-
-@media (max-width: 600px) {
-  .buttons-container {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .spaced-span {
-    display: block;
-    margin-bottom: 5px;
-  }
-
-  .q-btn {
-    width: 100%;
-  }
-
-  .q-message {
-    font-size: 0.9rem;
-    padding: 8px;
-  }
 }
 </style>

@@ -16,13 +16,21 @@ body {
   margin: 0 auto;
   height: max-content;
 
-  .columflex-container {
+  .columnflex-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
   }
 
+  .buttons-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0px;
+    margin-bottom: 0px;
+  }
   .rowflex-container {
     display: flex;
     justify-content: space-between;

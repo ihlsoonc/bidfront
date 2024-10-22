@@ -1,6 +1,6 @@
 <template>
   <div class="common-container">
-    <h6 style="text-align: center">선택 좌석 상세 정보</h6>
+    <div style="text-align: center">선택 좌석 상세 정보</div>
     <table>
       <thead>
         <tr>

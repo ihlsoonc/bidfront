@@ -7,9 +7,9 @@
     />
     <div class="seat-grid">
       <q-btn
-        v-for="seatNumber in 45"
+        v-for="seatNumber in 23"
         :key="seatNumber"
-        :label="`${seatNumber}번${getSeatInfo(seatNumber).highestBid}원\n${
+        :label="`${seatNumber}번\n${getSeatInfo(seatNumber).highestBid}원\n${
           getSeatInfo(seatNumber).bidCount
         }명`"
         :class="{
@@ -86,6 +86,7 @@ export default {
   transition: background-color 0.3s ease;
   cursor: pointer;
   padding: 5px;
+  background-color: #eff1f7;
 }
 
 .seat-box.selected {

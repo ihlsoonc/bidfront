@@ -10,7 +10,7 @@
 
         <!-- 입찰 좌석이 없는 경우 -->
         <q-card-section v-if="seatBidArray.length === 0">
-          <q-banner color="warning">입찰 좌석이 없습니다.</q-banner>
+          <q-banner color="warning">입찰 내역이 없습니다.</q-banner>
         </q-card-section>
 
         <!-- 입찰 좌석이 있는 경우 -->
@@ -144,6 +144,12 @@
               color="primary"
               label="입찰 제출"
             />
+            <q-btn
+              v-if="selectedSeats.length > 0 && !isClosedBid"
+              @click="cancelBidSubmit"
+              color="warning"
+              label="작업 취소"
+            />
           </q-item>
         </div>
       </q-card-section>
@@ -158,6 +164,7 @@
 import { ref, onMounted, watch } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { Dialog } from "quasar";
 import BidStatus from "./BidStatus.vue";
 import SeatMap from "./SeatMap.vue";
 import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
@@ -426,7 +433,7 @@ export default {
         return;
       }
 
-      const confirmMessage = `입찰 금액 ${bidTotal.value}원으로 등록됩니다. 진행하시겠습니까?`;
+      const confirmMessage = `입찰 금액 ${bidTotal.value}원으로 제출됩니다. 진행하시겠습니까?`;
       const isConfirmed = window.confirm(confirmMessage);
 
       if (!isConfirmed) return;
@@ -471,6 +478,32 @@ export default {
       } catch (error) {
         handleError(error);
       }
+    };
+    const cancelBidSubmit = () => {
+      Dialog.create({
+        title: "입찰 제출 취소",
+        message: "모든 입력 내용이 취소됩니다. 진행하시겠습니까?",
+        cancel: true, // '취소' 버튼을 추가
+        persistent: true, // 모달 외부를 클릭해도 닫히지 않도록 설정
+        ok: {
+          label: "예", // 확인 버튼을 '예'로 설정
+          color: "primary",
+        },
+        cancel: {
+          label: "아니오", // 취소 버튼을 '아니오'로 설정
+          color: "negative",
+        },
+      })
+        .onOk(() => {
+          // '예' 버튼을 눌렀을 때 동작
+          selectedSeats.value = [];
+          alert("입력 내용이 취소되었습니다.");
+        })
+        .onCancel(() => {
+          // '아니오' 버튼을 눌렀을 때 동작
+          alert("작업을 계속합니다.");
+          return;
+        });
     };
 
     const handleBidAmountChange = (value, seat) => {
@@ -652,6 +685,7 @@ export default {
       formatTimeToLocal,
       handleSeatClick,
       handleBidSubmit,
+      cancelBidSubmit,
       toggleHistory,
       handleBidAmountChange,
       handlePaySubmit,

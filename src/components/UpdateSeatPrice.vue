@@ -155,6 +155,7 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+import { Dialog } from "quasar";
 import BidStatus from "./BidStatus.vue";
 import { url, API, messageCommon } from "../utils/messagesAPIs";
 
@@ -300,16 +301,37 @@ export default {
       if (seatArray.value.length === 0) {
         showPrompt.value = true;
       } else {
-        const userConfirmed = confirm(
-          `현재 좌석이 모두 삭제된 후 새 좌석이 생성됩니다. 계속하시겠습니까?`
-        );
-        if (userConfirmed) {
-          seatArrayToDelete.value = seatArray.value.map((seat) => seat.seat_no);
-          seatArray.value = [];
-          showPrompt.value = true;
-        }
+        Dialog.create({
+          title: "새로운 좌석 정보 생성",
+          message:
+            "현재 좌석이 모두 삭제된 후 새 좌석이 생성됩니다. 계속하시겠습니까?",
+          cancel: true, // '취소' 버튼을 추가
+          persistent: true, // 모달 외부를 클릭해도 닫히지 않도록 설정
+          ok: {
+            label: "예", // 확인 버튼을 '예'로 설정
+            color: "primary",
+          },
+          cancel: {
+            label: "아니오", // 취소 버튼을 '아니오'로 설정
+            color: "negative",
+          },
+        })
+          .onOk(() => {
+            // '예' 버튼을 눌렀을 때 동작
+            seatArrayToDelete.value = seatArray.value.map(
+              (seat) => seat.seat_no
+            );
+            seatArray.value = [];
+            showPrompt.value = true;
+            alert("기존 좌석정보가 삭제되었습니다.");
+            message.value = "";
+          })
+          .onCancel(() => {
+            // '아니오' 버튼을 눌렀을 때 동작
+            alert("작업을 계속합니다.");
+            return;
+          });
       }
-      message.value = "";
     };
 
     const handleSeatCountSubmit = () => {

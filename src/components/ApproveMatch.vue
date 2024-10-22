@@ -316,16 +316,4 @@ const resetState = () => {
 onMounted(fetchMatches);
 </script>
 
-<style scoped>
-.common-container {
-  padding: 20px;
-}
-.q-gutter-sm-md-up {
-  gap: 10px;
-}
-@media (max-width: 600px) {
-  .q-mt-md {
-    margin-top: 12px !important;
-  }
-}
-</style>
+<style scoped></style>

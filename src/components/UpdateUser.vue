@@ -101,7 +101,7 @@
         <q-btn
           type="reset"
           label="취소"
-          color="secondary"
+          color="warning"
           outline
           class="full-width"
           @click="handleReset"
