@@ -115,6 +115,10 @@ export default {
       router.push(url[action]);
     };
 
+    const toggleLeftDrawer = () => {
+      leftDrawerOpen.value = !leftDrawerOpen.value;
+    };
+
     const handleUpdateStatus = (status) => {
       isLoggedIn.value = status.isLoggedIn;
       hasSelectedMatch.value = status.hasSelectedMatch;
@@ -124,10 +128,6 @@ export default {
       if (!isLoggedIn.value) {
         router.push(url.adminLogin);
       }
-    };
-
-    const toggleLeftDrawer = () => {
-      leftDrawerOpen.value = !leftDrawerOpen.value;
     };
 
     onMounted(() => {

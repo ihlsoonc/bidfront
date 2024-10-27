@@ -28,9 +28,11 @@
                 <q-td>
                   {{ props.row.seat_no }} ({{ props.row.row_no }} 열
                   {{ props.row.col_no }}번)
+                  {{ props.row.bid_won === "Y" ? "낙찰" : "유찰" }}
+                  {{ props.row.bid_paid === "Y" ? "결제완료" : "미결제" }}
                 </q-td>
                 <q-td>
-                  {{ props.row.bid_amount.toLocaleString() }}원
+                  {{ props.row.bid_amount.toLocaleString() }}원 :
                   {{ formatTimeToLocal(props.row.bid_at) }}
                 </q-td>
                 <q-td>
@@ -182,6 +184,7 @@ export default {
   setup() {
     const router = useRouter();
     const sessionTelno = ref("");
+    const queryTelno = ref("");
     const sessionUserName = ref("");
     const localSessionUserName = ref("");
     const matchNumber = ref(0);
@@ -260,7 +263,6 @@ export default {
           };
         });
 
-        console.log("====================", seatBidArray.value);
         // 총 입찰 금액을 계산
         totalBidAmount.value = seatBidArray.value.reduce(
           (sum, seat) => sum + (seat.bid_amount || 0),
@@ -314,16 +316,6 @@ export default {
       } catch (error) {
         console.error("에러 발생:", error); // 에러가 발생한 경우 로그 출력
         handleError(error);
-      }
-    };
-
-    const toggleHistory = (seat) => {
-      if (selectedHistoryButton.value === seat.seat_no) {
-        seat.historyShow = false;
-        selectedHistoryButton.value = -1;
-      } else {
-        selectedHistoryButton.value = seat.seat_no;
-        seat.historyShow = true;
       }
     };
 
@@ -506,6 +498,16 @@ export default {
         });
     };
 
+    const toggleHistory = (seat) => {
+      if (selectedHistoryButton.value === seat.seat_no) {
+        seat.historyShow = false;
+        selectedHistoryButton.value = -1;
+      } else {
+        selectedHistoryButton.value = seat.seat_no;
+        seat.historyShow = true;
+      }
+    };
+
     const handleBidAmountChange = (value, seat) => {
       bidAmounts.value = {
         ...bidAmounts.value,
@@ -541,6 +543,26 @@ export default {
       window.location.href = redirectUrl;
     };
 
+    const handleSelectVenue = () => {
+      router.push(url.selectVenueUser);
+    };
+
+    const fetchSessionUserId = async () => {
+      try {
+        const response = await axios.get(API.GET_SESSION_USERID, {
+          withCredentials: true,
+        });
+        if (response.status == "200") {
+          sessionTelno.value = response.data.telno;
+          sessionUserName.value = response.data.userName;
+          sessionStorage.setItem("userName", sessionUserName.value);
+        }
+      } catch (error) {
+        alert("로그인이 필요합니다.");
+        router.push(url.userLogin);
+      }
+    };
+
     const handleError = (error) => {
       if (error.response) {
         message.value = error.response.data;
@@ -548,6 +570,21 @@ export default {
         message.value = messageCommon.ERR_NETWORK;
       } else {
         message.value = messageCommon.ERR_ETC;
+      }
+    };
+
+    const restoreSession = async (sessionTelno, localSessionUserName) => {
+      try {
+        const response = await axios.post(
+          API.RESTORE_SESSION,
+          {
+            telno: sessionTelno,
+            userName: localSessionUserName,
+          },
+          { withCredentials: true }
+        );
+      } catch (error) {
+        console.error("세션 복구가 실패하였습니다.:", error);
       }
     };
 
@@ -591,46 +628,6 @@ export default {
       },
       { deep: true }
     );
-
-    const handleSelectVenue = () => {
-      router.push(url.selectVenueUser);
-    };
-
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserName.value = response.data.userName;
-          sessionStorage.setItem("userName", sessionUserName.value);
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.userLogin);
-      }
-    };
-
-    const restoreSession = async (sessionTelno, localSessionUserName) => {
-      try {
-        const response = await axios.post(
-          API.RESTORE_SESSION,
-          {
-            telno: sessionTelno,
-            userName: localSessionUserName,
-          },
-          { withCredentials: true }
-        );
-
-        if (response.status === 200) {
-          console.log("==============세션이 복구되었습니다.");
-        }
-      } catch (error) {
-        console.error("세션 복구 실패:", error);
-      }
-    };
-
     const fetchData = async () => {
       try {
         await fetchBidStatus(matchNumber.value);
@@ -642,27 +639,57 @@ export default {
       }
     };
 
+    const fetchSessionUserId1 = async () => {
+      try {
+        const response = await axios.get(API.GET_SESSION_USERID, {
+          withCredentials: true,
+        });
+        sessionTelno.value = response.data.telno;
+        sessionUserName.value = response.data.userName;
+        sessionStorage.setItem("userName", sessionUserName.value);
+
+        if (queryTelno.value) {
+          console.log("+++++++++++++입찰 화면으로 돌아왔습니다. ");
+          await fetchData();
+          router.push(url.bidSeats);
+        } else {
+          await fetchData();
+        }
+      } catch (error) {
+        message.value = error.response ? error.response.data : error.response;
+        console.log("++++++++++++세션 없음 : " + message.value);
+
+        if (queryTelno.value) {
+          console.log(
+            "+++++++++++++세션복구를 시도합니다. :" + queryTelno.value
+          );
+          await restoreSession(queryTelno.value, localSessionUserName.value);
+          console.log("+++++++++++++세션이 복구되었습니다.");
+          router.push(url.bidSeats);
+        } else {
+          alert("세션복구에 실패하였습니다. 다시 로그인을 해주세요.");
+          router.push(url.userLogin);
+        }
+      }
+    };
     onMounted(async () => {
       const localSessionMatchNumber = sessionStorage.getItem("matchNumber");
       if (!localSessionMatchNumber) {
         alert("경기를 먼저 선택해주세요.");
         return router.push(url.selectMatchUser);
       }
-
       matchNumber.value = localSessionMatchNumber;
       const queryString = window.location.search;
       const params = new URLSearchParams(queryString);
 
       if (params.has("telno")) {
-        sessionTelno.value = params.get("telno");
-        await restoreSession(sessionTelno.value, localSessionUserName.value);
-      } else {
-        await fetchSessionUserId();
+        queryTelno.value = params.get("telno");
+        console.log(
+          "returned from payment----------- telno :" + queryTelno.value
+        );
       }
-
-      await fetchData();
+      await fetchSessionUserId1();
     });
-
     return {
       sessionTelno,
       sessionUserName,

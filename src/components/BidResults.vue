@@ -96,14 +96,6 @@ export default {
       { label: "입찰좌석 보기", value: "bidded" },
     ];
 
-    const handleActionChange = (value) => {
-      if (value === "all") {
-        handleAllClick();
-      } else if (value === "bidded") {
-        handleBiddedSeat();
-      }
-    };
-
     // 좌석 클릭 처리 함수
     const handleSeatClick = (index) => {
       const MAX_SELECTION = 100;
@@ -143,6 +135,17 @@ export default {
       countSelectedSeats.value = updatedSeats.length;
     };
 
+    // 전체 좌석 선택 시 처리 함수
+    const handleAllClick = async () => {
+      countbiddedSeats.value = 0;
+      message.value = "";
+      minBidAmount.value = 0;
+      bidTotal.value = 0;
+      clickCount.value = 0;
+      selectedSeats.value = allSeatBidArray.value;
+      countSelectedSeats.value = selectedSeats.value.length;
+    };
+
     // 낙찰을 진행하는 함수
     const handleAwardBid = async () => {
       if (!canAwardBid.value) {
@@ -168,17 +171,6 @@ export default {
       }
     };
 
-    // 전체 좌석 선택 시 처리 함수
-    const handleAllClick = async () => {
-      countbiddedSeats.value = 0;
-      message.value = "";
-      minBidAmount.value = 0;
-      bidTotal.value = 0;
-      clickCount.value = 0;
-      selectedSeats.value = allSeatBidArray.value;
-      countSelectedSeats.value = selectedSeats.value.length;
-    };
-
     // 좌석 선택 화면으로 이동 함수
     const handleBiddedSeat = () => {
       selectedSeats.value = allSeatBidArray.value.filter(
@@ -192,18 +184,11 @@ export default {
       clickCount.value = 0;
     };
 
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserType.value = response.data.userType;
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.adminLogin);
+    const handleActionChange = (value) => {
+      if (value === "all") {
+        handleAllClick();
+      } else if (value === "bidded") {
+        handleBiddedSeat();
       }
     };
 
@@ -230,6 +215,7 @@ export default {
         handleError(error);
       }
     };
+
     const fetchAllBids = async () => {
       try {
         const response = await axios.get(API.GET_ALL_BIDS, {
@@ -301,6 +287,21 @@ export default {
 
     const handleRefresh = async () => {
       await fetchAllBids();
+    };
+
+    const fetchSessionUserId = async () => {
+      try {
+        const response = await axios.get(API.GET_SESSION_USERID, {
+          withCredentials: true,
+        });
+        if (response.status == "200") {
+          sessionTelno.value = response.data.telno;
+          sessionUserType.value = response.data.userType;
+        }
+      } catch (error) {
+        alert("로그인이 필요합니다.");
+        router.push(url.adminLogin);
+      }
     };
 
     onMounted(async () => {

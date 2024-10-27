@@ -82,7 +82,7 @@
             :rows="seatArray"
             :columns="columns"
             row-key="seat_no"
-            class="q-mt-md"
+            class="q-mt-none text-xs"
           >
             <!-- 좌석 번호 입력 -->
             <template v-slot:body-cell-seat_no="props">
@@ -182,7 +182,7 @@ export default {
     const columns = [
       {
         name: "seat_no",
-        label: "좌석 번호",
+        label: "좌석",
         align: "left",
         field: "seat_no",
         sortable: true,

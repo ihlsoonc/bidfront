@@ -51,6 +51,7 @@ export const API = reactive({
   USER_LOGOUT: "http://localhost:5000/api/session/clear",
   SEND_ONE_SMS: "http://localhost:5000/api/sendsms/sendauthcode",
   VERIFY_CODE: "http://localhost:5000/api/sendsms/verify-code",
+  SEND_KAKAO_ALIMTALK: "http://localhost:5000/api/sendkakao/send-kakao-message",
 
   USER_LOGIN: "http://localhost:5000/api/user/login",
   REGISTER_USER: "http://localhost:5000/api/user/register",

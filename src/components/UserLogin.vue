@@ -41,6 +41,7 @@
           />
           <q-btn label="비밀번호 변경" @click="handleChangePassword" flat />
           <q-btn label="회원가입" @click="handleRegister" flat />
+          <q-btn label="알림톡" @click="handleSendAlimTalk" flat />
         </q-card-actions>
       </q-card>
     </div>
@@ -82,7 +83,18 @@ export default {
         query: { tab: 2 },
       });
     };
-
+    const handleSendAlimTalk = async () => {
+      const response = await axios.post(
+        API.SEND_KAKAO_ALIMTALK,
+        {
+          query: userData.value.query,
+          password: userData.value.password,
+          table: tableName.value,
+          queryType: "telno",
+        },
+        { withCredentials: true }
+      );
+    };
     const handleRegister = () => {
       router.push(
         tableName.value === "user" ? url.registerUser : url.registerAdmin
@@ -165,6 +177,7 @@ export default {
         if (response.status === 200) {
           sessionTelno.value = response.data.telno;
           sessionUserName.value = response.data.userName;
+          message.value = sessionUserName.value + "님은 로그인 상태입니다.";
           emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
         } else {
           message.value = `로그인 해주세요.`;
@@ -192,6 +205,7 @@ export default {
       handleFindPassword,
       handleChangePassword,
       handleRegister,
+      handleSendAlimTalk,
     };
   },
 };
