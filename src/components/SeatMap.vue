@@ -1,10 +1,9 @@
 <template>
   <div>
-    <q-banner
-      class="q-mb-md"
-      type="info"
-      text="좌석을 선택한 후 입찰 금액을 입력하세요."
-    />
+    <p>
+      좌석을 선택한 후 입찰 금액을 입력하세요. 현재 입찰된 좌석은 윤곽선으로
+      표시됩니다.
+    </p>
     <div class="seat-grid">
       <q-btn
         v-for="seatNumber in 23"
@@ -20,6 +19,7 @@
         @click="handleSeatClick(seatNumber)"
         flat
         color="primary"
+        text-color="black"
         class="seat-box"
       />
     </div>
@@ -69,14 +69,14 @@ export default {
     auto-fit,
     minmax(60px, 1fr)
   ); /* 자동으로 크기 조절 */
-  gap: 10px;
+  gap: 5px;
   max-width: 100%; /* 반응형으로 최대 너비 100% */
-  margin: 0 auto;
+  margin-top: none;
 }
 
 .seat-box {
   height: 60px;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
   white-space: pre-line;
   display: flex;
@@ -85,7 +85,7 @@ export default {
   text-align: center;
   transition: background-color 0.3s ease;
   cursor: pointer;
-  padding: 5px;
+  padding: 3px;
   background-color: #eff1f7;
 }
 
@@ -94,24 +94,7 @@ export default {
 }
 
 .seat-box.bidded {
-  background-color: #8da1ea;
-}
-
-.seat-box.selectedbidded {
-  background-color: #d2dafa;
-}
-
-@media (max-width: 600px) {
-  .seat-box {
-    font-size: 10px;
-    height: 50px;
-  }
-}
-
-@media (min-width: 601px) {
-  .seat-box {
-    font-size: 12px;
-    height: 60px;
-  }
+  border: 5px solid #a7a3a3; /* 짙은 회색(#a7a3a3) 두께 5px */
+  box-shadow: 0 0 8px 3px #a7a3a3; /* 번짐 효과 추가 */
 }
 </style>

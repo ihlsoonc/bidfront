@@ -1,0 +1,33 @@
+      localSessionData = fetchLocalSession(["tableName", "userClass"]);
+
+
+
+
+const fetchLocalSessionInfo = () => {
+  sessionUlocalSessionData.serTypetableName = sessionStorage.getItem(`${uniqueContext}_tableName");
+  userClass= sessionStorage.getItem(`${uniqueContext}_userClass");
+  selectedVenueCd.value = sessionStorage.getItem(`${uniqueContext}_venueCd");
+  console.log(
+    "Session storage ====> ",
+    Object.fromEntries(Object.entries(sessionStorage))
+  );
+};
+  alert('action===> '+action);
+import { handleLink } from "../utils/handleLink";
+
+      handleLink(localSessionData.userClass, action);
+const handleReSelect = async () => {
+  const urlTogo = url.selectVenue?.[userClass];
+  router.push(urlTogo);
+};
+
+const handleBackToLogin = () => {
+  alert("로그인이 필요합니다.");
+  const urlTogo = url.login?.[userClass];
+  router.push(urlTogo);
+};
+
+// #{userName}의 낙찰 내용을 알려드립니다.
+// {bidsArray}
+// 결제할 금액은 #{bidTotal}입니다.
+// 결제시한 : ##{payDue}

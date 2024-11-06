@@ -61,7 +61,7 @@
       v-if="insertInputMode || updateInputMode || deleteConfirmMode"
       class="q-mt-md"
     >
-      <q-form @submit.prevent="handleSubmit">
+      <q-form>
         <div class="row q-col-gutter-md">
           <q-input
             v-model="matchData.matchNumber"
@@ -162,23 +162,25 @@
           />
         </div>
         <br />
+        <div class="row q-col-gutter-md">
+          <q-btn
+            @click="handleSubmit"
+            type="submit"
+            label="확인"
+            color="primary"
+            class="col-12 col-md-4 q-mt-md"
+            :disable="
+              !insertInputMode && !updateInputMode && !deleteConfirmMode
+            "
+          />
+          <q-btn
+            @click="handleSubmitCancel"
+            label="취소"
+            color="negative"
+            class="col-12 col-md-4 q-mt-md"
+          />
+        </div>
       </q-form>
-      <div class="row q-col-gutter-md">
-        <q-btn
-          @click="handleSubmit"
-          type="submit"
-          label="확인"
-          color="primary"
-          class="col-12 col-md-4 q-mt-md"
-          :disable="!insertInputMode && !updateInputMode && !deleteConfirmMode"
-        />
-        <q-btn
-          @click="handleSubmitCancel"
-          label="취소"
-          color="negative"
-          class="col-12 col-md-4 q-mt-md"
-        />
-      </div>
     </div>
     <q-banner v-if="message" type="info">{{ message }}</q-banner>
     <q-banner v-if="fileMessage" type="info">{{ fileMessage }}</q-banner>
@@ -325,78 +327,83 @@ const fetchVenues = async () => {
 };
 
 const handleSubmit = async () => {
-  if (!deleteConfirmMode.value && !validateInput()) return;
-
-  let venueCd;
-
-  if (newVenueCd) {
-    venueCd = newVenueCd;
-  } else {
-    venueCd = matchData.value.venueCd;
-  }
-  let bidCd;
-  if (newBidCd) {
-    bidCd = newBidCd;
-  } else {
-    bidCd = matchData.value.isBidAvailable;
-  }
-  const requestData = {
-    ...matchData.value,
-    telno: sessionResults.telno,
-    userType: sessionResults.userType,
-    venueCd: localSessionData.venueCd,
-    isBidAvailable: bidCd,
-  };
-
-  const apiMapping = {
-    insert: APIs.ADD_MATCH,
-    update: APIs.UPDATE_MATCH,
-    delete: APIs.DELETE_MATCH,
-  };
-
-  // 현재 모드 확인
-  const currentMode = insertInputMode.value
-    ? "insert"
-    : updateInputMode.value
-    ? "update"
-    : deleteConfirmMode.value
-    ? "delete"
-    : null;
-
-  console.log("현재 모드:", currentMode);
-
-  // 유효한 모드가 설정되었는지 확인
-  if (!currentMode) {
-    console.warn("유효한 작업 모드가 설정되지 않았습니다.");
-    return;
-  }
-
-  const apiUrl = apiMapping[currentMode];
-
-  console.log("requestData:", requestData);
   try {
-    // API 요청 시도
-    const response = await axios.post(apiUrl, requestData);
-    console.log("API 응답 상태:", response.status);
-    console.log("API 응답 데이터:", response.data);
+    // if (!deleteConfirmMode.value && !validateInput()) return;
 
-    // 응답 성공 확인
+    let venueCd;
+
+    if (newVenueCd) {
+      venueCd = newVenueCd;
+    } else {
+      venueCd = matchData.value.venueCd;
+    }
+    let bidCd;
+    if (newBidCd) {
+      bidCd = newBidCd;
+    } else {
+      bidCd = matchData.value.isBidAvailable;
+    }
+    const requestData = {
+      ...matchData.value,
+      telno: sessionTelno,
+      userType: sessionUserType,
+      venueCd: venueCd,
+      isBidAvailable: bidCd,
+    };
+
+    const apiMapping = {
+      insert: APIs.ADD_MATCH,
+      update: APIs.UPDATE_MATCH,
+      delete: APIs.DELETE_MATCH,
+    };
+    console.log("insert", insertInputMode.value);
+    console.log("delete", Mode.value);
+    // 요청한 URL과 파라미터 출력
+    // 현재 모드 설정 (우선순위: insert > update > delete)
+    const currentMode = insertInputMode.value
+      ? "insert"
+      : updateInputMode.value
+      ? "update"
+      : deleteConfirmMode.value
+      ? "delete"
+      : null;
+
+    if (currentMode) {
+      const apiUrl = apiMapping[currentMode];
+      try {
+        // 요청 전 모드와 URL 확인
+        console.log(
+          `Requesting ${currentMode.toUpperCase()} with URL:`,
+          apiUrl
+        );
+
+        const response = await axios.post(apiUrl, requestData);
+
+        // 요청 성공 후 응답 확인
+        console.log(
+          `Response from ${currentMode.toUpperCase()}:`,
+          response.data
+        );
+      } catch (error) {
+        console.error(
+          `Error during ${currentMode.toUpperCase()} operation:`,
+          error
+        );
+      }
+    } else {
+      console.warn("No valid operation mode selected.");
+    }
+
     if (response.status === 200) {
       message.value = response.data.message;
-
-      // 파일 업로드 확인
+      alert(response.data.message);
       if (updateInputMode.value || insertInputMode.value) {
-        console.log("파일 업로드 시도 중...");
         handleFileUpload();
       }
-
       fetchMatches();
       resetState();
-    } else {
-      console.error("API 응답 오류:", response.status);
     }
   } catch (error) {
-    console.error("서버 요청 오류:", error);
     handleError(error);
   }
 };
@@ -538,43 +545,43 @@ const validateInput = () => {
     return false;
   }
 
-  if (!startDate) {
-    alert("경기 일자를 입력해 주세요.");
-    return false;
-  }
-
-  if (!startTime) {
-    alert("시작 시간을 입력해 주세요.");
-    return false;
-  }
-
-  if (!endTime) {
-    alert("종료 시간을 입력해 주세요.");
-    return false;
-  }
-
-  // 입찰 종료 시간이 입찰 시작 시간보다 커야 함
-  if (bidEndDateTime <= bidStartDateTime) {
-    alert("입찰 마감시간은 입찰 시작시간보다 커야 합니다.");
-    return false;
-  }
-
-  // 입찰 종료 시간이 경기 시작 시간보다 크면 안 됨
-  if (bidEndDateTime >= new Date(startDate)) {
-    alert("입찰 종료 시간은 경기 시작 시간보다 작아야 합니다.");
-    return false;
-  }
-
-  // 경기 종료 시간이 경기 시작 시간보다 커야 함
-  if (new Date(endTime) <= new Date(startTime)) {
-    alert("경기 종료 시간은 시작 시간보다 커야 합니다.");
-    return false;
-  }
-
-  // if (isBidAvailable === undefined || isBidAvailable === "") {
-  //   alert("입찰 구분을 선택해 주세요.");
+  // if (!startDate) {
+  //   alert("경기 일자를 입력해 주세요.");
   //   return false;
   // }
+
+  // if (!startTime) {
+  //   alert("시작 시간을 입력해 주세요.");
+  //   return false;
+  // }
+
+  // if (!endTime) {
+  //   alert("종료 시간을 입력해 주세요.");
+  //   return false;
+  // }
+
+  // // 입찰 종료 시간이 입찰 시작 시간보다 커야 함
+  // if (bidEndDateTime <= bidStartDateTime) {
+  //   alert("입찰 마감시간은 입찰 시작시간보다 커야 합니다.");
+  //   return false;
+  // }
+
+  // // 입찰 종료 시간이 경기 시작 시간보다 크면 안 됨
+  // if (bidEndDateTime >= new Date(startDate)) {
+  //   alert("입찰 종료 시간은 경기 시작 시간보다 작아야 합니다.");
+  //   return false;
+  // }
+
+  // // 경기 종료 시간이 경기 시작 시간보다 커야 함
+  // if (new Date(endTime) <= new Date(startTime)) {
+  //   alert("경기 종료 시간은 시작 시간보다 커야 합니다.");
+  //   return false;
+  // }
+
+  // // if (isBidAvailable === undefined || isBidAvailable === "") {
+  // //   alert("입찰 구분을 선택해 주세요.");
+  // //   return false;
+  // // }
 
   return true;
 };

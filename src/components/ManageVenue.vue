@@ -102,10 +102,16 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
-import { url, API } from "../utils/messagesAPIs";
+import axios from "axios";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { fetchLocalSession } from "src/utils/fetchLocalSession";
 
+let sessionResults = {};
+let localSessionData = {};
+const router = useRouter();
 const venueArray = ref([]);
 const venueData = ref({
   venueCd: "",
@@ -128,13 +134,11 @@ const columns = [
   },
   { name: "actions", label: "변경", align: "center" },
 ];
-const sessionTelno = ref("");
-const sessionUserType = ref("");
+
 const insertInputMode = ref(false);
 const updateInputMode = ref(false);
 const deleteConfirmMode = ref(false);
 const message = ref("");
-const router = useRouter();
 
 const guideMessage = computed(() => {
   if (insertInputMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
@@ -147,9 +151,8 @@ const guideMessage = computed(() => {
 
 const fetchVenues = async () => {
   try {
-    const response = await axios.get(API.GET_ALL_VENUES);
+    const response = await axios.get(APIs.GET_ALL_VENUES);
     if (response.status === 200) {
-      console.log(venueArray.value);
       venueArray.value = response.data;
     }
   } catch (error) {
@@ -166,11 +169,11 @@ const handleSubmit = async () => {
   let response;
   try {
     if (insertInputMode.value) {
-      response = await axios.post(API.ADD_VENUE, venueData.value);
+      response = await axios.post(APIs.ADD_VENUE, venueData.value);
     } else if (updateInputMode.value) {
-      response = await axios.post(API.UPDATE_VENUE, venueData.value);
+      response = await axios.post(APIs.UPDATE_VENUE, venueData.value);
     } else if (deleteConfirmMode.value) {
-      response = await axios.post(API.DELETE_VENUE, requestData);
+      response = await axios.post(APIs.DELETE_VENUE, requestData);
     }
     if (response.status === 200) {
       alert(response.data.message);
@@ -209,29 +212,12 @@ const handleDelete = (props) => {
   deleteConfirmMode.value = true;
 };
 
-const fetchSessionUserId = async () => {
-  try {
-    const response = await axios.get(API.GET_SESSION_USERID, {
-      withCredentials: true,
-    });
-    if (response.status == "200") {
-      sessionTelno.value = response.data.telno;
-      sessionUserType.value = response.data.userType;
-    }
-  } catch (error) {
-    alert("로그인이 필요합니다.");
-    router.push(url.adminLogin);
-  }
-};
-
 const handleError = (error) => {
-  if (error.response) {
-    message.value = error.response.data;
-  } else if (error.request) {
-    message.value = messageCommon.ERR_NETWORK;
-  } else {
-    message.value = messageCommon.ERR_ETC;
-  }
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
 };
 
 const setNewVenueData = (venue) => {
@@ -272,9 +258,19 @@ const resetForm = () => {
 const resetMessage = () => {
   message.value = "";
 };
-
+const handleBackToLogin = () => {
+  handleLink(router, localSessionData.userClass, "login");
+};
+const resetLoginStatus = () => {
+  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+};
 onMounted(async () => {
-  await fetchSessionUserId();
+  localSessionData = fetchLocalSession(["userClass"]);
+  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+  if (!sessionResults.success) {
+    resetLoginStatus();
+    handleBackToLogin();
+  }
   await fetchVenues();
 });
 </script>

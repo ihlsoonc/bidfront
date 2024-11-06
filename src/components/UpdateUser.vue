@@ -84,7 +84,7 @@
         />
 
         <q-select
-          v-if="!isUserTable"
+          v-if="isAdmin"
           v-model="userData.userType"
           :options="adminTypesOptions"
           label="사용자 타입"
@@ -114,26 +114,40 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
-import { API, messageCommon, ADMIN_TYPES } from "../utils/messagesAPIs";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { ADMIN_TYPES } from "../utils/ADMIN_TYPES";
 
+// 상수 및 세션 관련 변수 선언
+let localSessionData = {};
+let userClass = "";
+
+// 입력 및 상태 관련 ref 선언
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
 const password = ref(""); // 비밀번호
-const tableName = ref("");
 const updateMode = ref(false);
-const isUserTable = ref(false);
+const isAdmin = ref(false);
 const validEmail = ref(true);
 const userData = ref(null); // 조회된 사용자 정보
 const passwordMsg = ref(""); // 비밀번호 관련 메시지
 const message = ref(""); // 상태 메시지
 
+// 사용자 타입 옵션 설정
+const adminTypesOptions = Object.keys(ADMIN_TYPES).map((key) => ({
+  label: ADMIN_TYPES[key],
+  value: key,
+}));
+
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
   try {
-    const response = await axios.post(API.GET_USER_INFO, {
+    const response = await axios.post(APIs.GET_USER_INFO, {
       query: searchQuery.value,
       password: password.value,
       queryType: "telno",
-      table: tableName.value,
+      table: localSessionData.tableName,
     });
 
     if (response.status === 200 && response.data) {
@@ -149,13 +163,12 @@ const handleSearch = async () => {
 
 // 사용자 정보 수정 함수
 const handleUpdate = async () => {
-  if (!validateInput(userData)) {
-    return;
-  }
+  if (!validateInput(userData)) return;
+
   try {
-    const response = await axios.post(API.UPDATE_USER, {
+    const response = await axios.post(APIs.UPDATE_USER, {
       ...userData.value,
-      table: tableName.value,
+      table: localSessionData.tableName,
     });
 
     if (response.status === 200) {
@@ -222,54 +235,40 @@ const validateInput = (userData) => {
   return true;
 };
 
+// 에러 처리 함수
+const handleError = (error) => {
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
+};
+
+// 초기화 함수
 const handleReset = () => {
   updateMode.value = false;
   message.value = "";
 };
 
-const handleError = (error) => {
-  if (error.response) {
-    message.value = error.response.data;
-  } else if (error.request) {
-    message.value = messageCommon.ERR_NETWORK;
-  } else {
-    message.value = messageCommon.ERR_ETC;
-  }
+const handleBackToLogin = () => {
+  handleLink(router, localSessionData.userClass, "login");
+};
+
+const resetLoginStatus = () => {
+  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
 };
 
 // onMounted에서 테이블 이름 설정
-onMounted(() => {
-  const sessiontableName = sessionStorage.getItem("tableName");
-  if (sessiontableName) {
-    tableName.value = sessiontableName;
+onMounted(async () => {
+  localSessionData = fetchLocalSession(["tableName", "userClass"]);
+  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+  if (!sessionResults.success) {
+    resetLoginStatus();
+    handleBackToLogin();
   }
-  isUserTable.value = tableName.value === "user";
+  isAdmin.value = localSessionData.tableName === "admin";
   passwordMsg.value = "사용자 정보 수정을 위해 비밀번호를 입력해주세요.";
 });
-
-// 사용자 타입 옵션 설정
-const adminTypesOptions = Object.keys(ADMIN_TYPES).map((key) => ({
-  label: ADMIN_TYPES[key],
-  value: key,
-}));
 </script>
 
-<style scoped>
-.common-container {
-  max-width: 600px;
-  margin: auto;
-}
-
-.full-width {
-  width: 100%;
-}
-
-.q-mb-md {
-  margin-bottom: 16px;
-}
-
-.messagebox {
-  margin-top: 10px;
-  color: red;
-}
-</style>
+<style scoped></style>

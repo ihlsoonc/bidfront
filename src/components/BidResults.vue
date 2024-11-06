@@ -21,24 +21,27 @@
       :disabled="isClosedBid"
       :seatBidArray="allSeatBidArray"
     />
-    <q-btn
-      label="데이터 다시 불러오기"
-      @click="handleRefresh"
-      color="primary"
-      class="q-mt-md full-width"
-      flat
-    />
 
     <div class="columnflex-container q-gutter-md">
-      <div class="buttons-container" v-if="canAwardBid">
+      <q-card-section>
         <q-btn
           label="낙찰 진행"
-          color="secondary"
+          color="primary"
           @click="handleAwardBid"
-          flat
-          class="full-width"
+          :disable="isClosedBid"
+        />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <q-btn
+          label="경기 다시 선택하기"
+          color="secondary"
+          @click="handleReSelect"
+        />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <q-btn
+          label="데이터 다시 불러오기"
+          @click="handleRefresh"
+          color="secondary"
         />
-      </div>
+      </q-card-section>
+
       <div v-if="countSelectedSeats > 0" class="colomnflex-container">
         <div class="spaced-span">
           선택된 좌석수&nbsp;: {{ countSelectedSeats }}개&nbsp; 입찰
@@ -51,8 +54,8 @@
         <SelectedSeatsDetails
           :selectedSeats="selectedSeats"
           :bidAmounts="[]"
-          :isUser="false"
-          :isClosedBid="false"
+          :isUser="isUser"
+          :isClosedBid="isClosedBid"
         />
       </div>
     </div>
@@ -60,12 +63,17 @@
 </template>
 <script>
 import { onMounted, ref, watch } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
+import axios from "axios";
+
 import BidStatus from "./BidStatus.vue";
 import SeatMap from "./SeatMap.vue";
 import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
-import { url, API, messageCommon } from "../utils/messagesAPIs.js";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { handleLink } from "../utils/handleLink";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
 
 export default {
   components: {
@@ -74,10 +82,16 @@ export default {
     SelectedSeatsDetails,
   },
   setup() {
+    let sessionTelno = "";
+    let localSessionData = {};
+    let matchNumber = 0;
     const router = useRouter();
-    const sessionTelno = ref("");
-    const sessionUserType = ref("");
-    const matchNumber = ref(0);
+    const radioOptions = [
+      { label: "전체좌석 보기", value: "all" },
+      { label: "입찰좌석 보기", value: "bidded" },
+    ];
+    const isUser = ref(false); // true :일반 사용자 false :관리자, 입찰제출 버튼 enable에 사용됨
+    const isClosedBid = ref(false); // true : 일반 사용자의 경우, 입찰 제출 버튼이 diable됨
     const bidStatus = ref({});
     const biddedSeatCount = ref(0);
     const canAwardBid = ref(false);
@@ -90,11 +104,6 @@ export default {
     const bidTotal = ref(0);
     const message = ref("");
     const selectedAction = ref("all");
-
-    const radioOptions = [
-      { label: "전체좌석 보기", value: "all" },
-      { label: "입찰좌석 보기", value: "bidded" },
-    ];
 
     // 좌석 클릭 처리 함수
     const handleSeatClick = (index) => {
@@ -135,6 +144,11 @@ export default {
       countSelectedSeats.value = updatedSeats.length;
     };
 
+    // 경기 다시 선택
+    const handleReSelect = async () => {
+      handleLink(router, localSessionData.userClass, "selectVenue");
+    };
+
     // 전체 좌석 선택 시 처리 함수
     const handleAllClick = async () => {
       countbiddedSeats.value = 0;
@@ -157,13 +171,13 @@ export default {
       if (!isConfirmed) return;
 
       try {
-        const response = await axios.post(API.AWARD_BID, {
-          matchNumber: matchNumber.value,
+        const response = await axios.post(APIs.AWARD_BID, {
+          matchNumber: matchNumber,
         });
         if (response.status === 200) {
           alert("성공적으로 낙찰 처리가 되었습니다.");
           message.value = response.data.message;
-          fetchBidStatus(matchNumber.value);
+          fetchBidStatus(matchNumber);
           canAwardBid.value = false;
         }
       } catch (error) {
@@ -196,7 +210,7 @@ export default {
     const fetchBidStatus = async (sessionMatchNumber) => {
       try {
         const response = await axios.get(
-          API.GET_BIDSTATUS,
+          APIs.GET_BIDSTATUS,
           { params: { matchNumber: sessionMatchNumber } },
           { withCredentials: true }
         );
@@ -208,7 +222,6 @@ export default {
             biddedSeatCount.value > 0
           ) {
             canAwardBid.value = true;
-            alert("입찰이 가능합니다. :" + canAwardBid.value);
           }
         }
       } catch (error) {
@@ -218,10 +231,10 @@ export default {
 
     const fetchAllBids = async () => {
       try {
-        const response = await axios.get(API.GET_ALL_BIDS, {
+        const response = await axios.get(APIs.GET_ALL_BIDS, {
           params: {
-            telno: sessionTelno.value,
-            matchNumber: matchNumber.value,
+            telno: sessionTelno,
+            matchNumber: matchNumber,
           },
         });
 
@@ -255,13 +268,11 @@ export default {
     };
 
     const handleError = (error) => {
-      if (error.response) {
-        message.value = error.response.data;
-      } else if (error.request) {
-        message.value = messageCommon.ERR_NETWORK;
-      } else {
-        message.value = messageCommon.ERR_ETC;
-      }
+      message.value = error.response
+        ? error.response.data
+        : error.request
+        ? messageCommon.ERR_NETWORK
+        : messageCommon.ERR_ETC;
     };
 
     watch(
@@ -287,47 +298,45 @@ export default {
 
     const handleRefresh = async () => {
       await fetchAllBids();
+      alert("최신 정보가 갱신되었습니다.");
     };
 
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserType.value = response.data.userType;
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.adminLogin);
-      }
+    const handleBackToLogin = () => {
+      handleLink(router, localSessionData.userClass, "login");
+    };
+    const resetLoginStatus = () => {
+      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
     };
 
     onMounted(async () => {
-      const sessionMatchNumber = sessionStorage.getItem("matchNumber");
-      if (sessionMatchNumber) {
+      localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
+      matchNumber = localSessionData.matchNumber;
+      if (matchNumber) {
         try {
-          matchNumber.value = sessionMatchNumber;
-          await fetchSessionUserId();
+          const result = await fetchSessionUser(localSessionData.userClass);
+          if (!result.success) {
+            resetLoginStatus();
+            handleBackToLogin();
+          }
           await fetchAllBids();
-          await fetchBidStatus(sessionMatchNumber);
+          await fetchBidStatus(matchNumber);
         } catch (error) {
           handleError(error);
         }
       } else {
         alert("경기를 먼저 선택해주세요.");
-        router.push(url.selectMatch);
+        handleLink(router, localSessionData.userClass, "selectMatch");
       }
     });
 
     return {
-      sessionTelno,
-      sessionUserType,
       matchNumber,
       bidStatus,
+      isClosedBid,
+      isUser,
       biddedSeatCount,
       allSeatBidArray,
+      selectedAction,
       selectedSeats,
       countSelectedSeats,
       clickCount,
@@ -337,6 +346,7 @@ export default {
       canAwardBid,
       message,
       handleSeatClick,
+      handleReSelect,
       handleAwardBid,
       handleAllClick,
       handleBiddedSeat,
@@ -358,10 +368,6 @@ export default {
   padding: 10px;
   border-radius: 5px;
   font-size: 1rem;
-}
-
-.q-btn {
-  margin-top: 20px;
 }
 
 .full-width {

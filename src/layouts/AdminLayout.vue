@@ -53,7 +53,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar } from "quasar";
 import NavBarAdmin from "./NavBarAdmin.vue";
-import { url } from "../utils/messagesAPIs";
+import { url } from "../utils/messageCommon";
 
 export default {
   name: "AdminHome",

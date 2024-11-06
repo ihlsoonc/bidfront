@@ -2,128 +2,30 @@
   <q-page class="common-container">
     <!-- 입찰 상태 표시 -->
     <BidStatus :bidStatus="bidStatus" />
-    <div class="seat-list">
-      <q-card class="q-pa-md q-mb-md">
-        <q-card-section>
-          <h6>입찰 및 낙찰 현황</h6>
-        </q-card-section>
-
-        <!-- 입찰 좌석이 없는 경우 -->
-        <q-card-section v-if="seatBidArray.length === 0">
-          <q-banner color="warning">입찰 내역이 없습니다.</q-banner>
-        </q-card-section>
-
-        <!-- 입찰 좌석이 있는 경우 -->
-        <q-card-section v-else>
-          <q-table
-            :rows="seatBidArray"
-            :columns="tableColumns"
-            row-key="seat_no"
-            flat
-          >
-            <!-- 좌석 번호, 열, 컬럼 -->
-            <template v-slot:body="props">
-              <!-- 좌석 정보 -->
-              <q-tr :props="props">
-                <q-td>
-                  {{ props.row.seat_no }} ({{ props.row.row_no }} 열
-                  {{ props.row.col_no }}번)
-                  {{ props.row.bid_won === "Y" ? "낙찰" : "유찰" }}
-                  {{ props.row.bid_paid === "Y" ? "결제완료" : "미결제" }}
-                </q-td>
-                <q-td>
-                  {{ props.row.bid_amount.toLocaleString() }}원 :
-                  {{ formatTimeToLocal(props.row.bid_at) }}
-                </q-td>
-                <q-td>
-                  {{ (props.row.highest_bid_amount || 0).toLocaleString() }}원
-                </q-td>
-                <q-td>
-                  <q-btn
-                    v-if="props.row.historyButtonEnabled"
-                    @click="toggleHistory(props.row)"
-                    :color="
-                      selectedHistoryButton === props.row.seat_no
-                        ? 'primary'
-                        : 'secondary'
-                    "
-                    size="xs"
-                    :icon="
-                      selectedHistoryButton === props.row.seat_no
-                        ? 'keyboard_arrow_up'
-                        : 'keyboard_arrow_down'
-                    "
-                  >
-                    <q-badge
-                      :color="
-                        selectedHistoryButton === props.row.seat_no
-                          ? 'primary'
-                          : 'secondary'
-                      "
-                      >이력 {{ props.row.bidHistory.length }}건</q-badge
-                    >
-                  </q-btn>
-                </q-td>
-              </q-tr>
-
-              <!-- 입찰 이력 (해당 행 아래 표시) -->
-              <q-tr v-if="props.row.historyShow">
-                <q-td colspan="4">
-                  <q-item
-                    v-for="(history, hIndex) in props.row.bidHistory"
-                    :key="hIndex"
-                  >
-                    <q-item-section>
-                      {{ history.bid_amount.toLocaleString() }}원 -
-                      {{ formatTimeToLocal(history.bid_at) }}
-                    </q-item-section>
-                  </q-item>
-                </q-td>
-              </q-tr>
-            </template>
-          </q-table>
-        </q-card-section>
-      </q-card>
-    </div>
-
-    <!-- 결제 및 총 입찰 금액 -->
-    <q-card class="q-pa-md q-mb-md">
-      <q-card-section>
-        <div>
-          낙찰금액 합계: {{ totalWinAmount.toLocaleString() }}원
-          {{ totalWinCount }}건
-        </div>
-        <div>입찰금액 합계: {{ totalBidAmount.toLocaleString() }}원</div>
-      </q-card-section>
-      <q-card-section>
-        <q-btn
-          @click="handlePaySubmit"
-          :disable="isApproved || totalWinAmount === 0"
-          color="primary"
-          label="낙찰 내용 결제"
-        />
-        <q-btn
-          @click="handleSelectVenue"
-          color="secondary"
-          label="경기 다시 선택"
-        />
-      </q-card-section>
-    </q-card>
-
+    <!-- 좌석 목록 컴포넌트 -->
+    <BidsList
+      :seats="seatBidArray"
+      :tableColumns="tableColumns"
+      :selectedHistoryButton="selectedHistoryButton"
+      :totalWinAmount="totalWinAmount"
+      :totalWinCount="totalWinCount"
+      :totalBidAmount="totalBidAmount"
+      :isApproved="isApproved"
+      @toggleHistory="toggleHistory"
+      @paySubmit="handlePaySubmit"
+      @selectVenue="handleSelectVenue"
+    />
     <!-- 새로운 입찰 입력 섹션 -->
     <q-card v-if="!isClosedBid" class="q-pa-md">
+      <!-- 좌석박스 및 입찰자수 최고가 표시  -->
       <q-card-section>
-        <q-banner class="text-center">새로운 입찰 입력</q-banner>
+        <SeatMap
+          :selectedSeats="selectedSeats"
+          @seatClick="handleSeatClick"
+          :disabled="isClosedBid"
+          :seatBidArray="allSeatBidArray"
+        />
       </q-card-section>
-
-      <!-- SeatMap 컴포넌트 -->
-      <SeatMap
-        :selectedSeats="selectedSeats"
-        @seatClick="handleSeatClick"
-        :disabled="isClosedBid"
-        :seatBidArray="allSeatBidArray"
-      />
-
       <!-- 선택된 좌석 정보와 입찰 금액 -->
       <q-card-section>
         <SelectedSeatsDetails
@@ -132,28 +34,9 @@
           @bidAmountChange="handleBidAmountChange"
           :isClosedBid="isClosedBid"
           :isUser="isUser"
+          @submit-bid="handleSubmitBid"
+          @cancel-bid="handleCancelSubmit"
         />
-
-        <div class="q-gutter-sm">
-          <q-item>
-            <q-item-section>
-              <span>최저 입찰 금액 합계: {{ minBidAmount }}원</span>
-              <span>현재 입찰 금액: {{ bidTotal }}원</span>
-            </q-item-section>
-            <q-btn
-              v-if="selectedSeats.length > 0 && !isClosedBid"
-              @click="handleBidSubmit"
-              color="primary"
-              label="입찰 제출"
-            />
-            <q-btn
-              v-if="selectedSeats.length > 0 && !isClosedBid"
-              @click="cancelBidSubmit"
-              color="warning"
-              label="작업 취소"
-            />
-          </q-item>
-        </div>
       </q-card-section>
       <q-card-section v-if="message">
         <q-banner color="negative">{{ message }}</q-banner>
@@ -164,36 +47,41 @@
 
 <script>
 import { ref, onMounted, watch } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
+import axios from "axios";
 import { Dialog } from "quasar";
 import BidStatus from "./BidStatus.vue";
+import BidsList from "./BidsList.vue";
 import SeatMap from "./SeatMap.vue";
 import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
-import { formatTimeToLocal } from "../utils/commonFunction";
-import { url, API, messageCommon } from "../utils/messagesAPIs.js";
+import { formatTimeToLocal } from "../utils/formatTimeToLocal";
+import { handleLink } from "../utils/handleLink";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
 
 const MAX_SELECTION = 5;
 
 export default {
   components: {
     BidStatus,
+    BidsList,
     SeatMap,
     SelectedSeatsDetails,
   },
   setup() {
+    let sessionTelno = "";
+    let sessionUserName = "";
+    let localSessionUserName = "";
+    let localSessionData = {};
+    let matchNumber = 0;
     const router = useRouter();
-    const sessionTelno = ref("");
-    const queryTelno = ref("");
-    const sessionUserName = ref("");
-    const localSessionUserName = ref("");
-    const matchNumber = ref(0);
     const bidOpen = "O";
+    const queryTelno = ref("");
     const isClosedBid = ref(false);
     const isApproved = ref(false);
     const isUser = ref(true);
     const selectedHistoryButton = ref(-1);
-
     const seatBidArray = ref([]);
     const allSeatBidArray = ref([]);
     const selectedSeats = ref([]);
@@ -221,10 +109,10 @@ export default {
       { name: "bidHistory", label: "이력", align: "left" },
     ]);
 
-    const fetchBidStatus = async (localSessionMatchNumber) => {
+    const fetchBidStatus = async (matchNumber) => {
       try {
-        const response = await axios.get(API.GET_BIDSTATUS, {
-          params: { matchNumber: localSessionMatchNumber },
+        const response = await axios.get(APIs.GET_BIDSTATUS, {
+          params: { matchNumber: matchNumber },
           withCredentials: true,
         });
         bidStatus.value = response.data;
@@ -238,8 +126,8 @@ export default {
 
     const fetchMyLast = async () => {
       try {
-        const response = await axios.get(API.GET_MY_LASTBIDS, {
-          params: { telno: sessionTelno.value, matchNumber: matchNumber.value },
+        const response = await axios.get(APIs.GET_MY_LASTBIDS, {
+          params: { telno: sessionTelno, matchNumber: matchNumber },
           withCredentials: true,
         });
         // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
@@ -257,7 +145,12 @@ export default {
                   ? "낙찰"
                   : "유찰"
                 : " ",
-            paidStatus: seat.bid_paid === "Y" ? "결제완료" : "미결제",
+            paidStatus:
+              bidStatus.value.bid_open_status === "F"
+                ? seat.bid_paid === "Y"
+                  ? "결제완료"
+                  : "미결제"
+                : " ",
             historyButtonEnabled: false,
             historyShow: false,
           };
@@ -275,8 +168,8 @@ export default {
 
     const fetchMyBids = async () => {
       try {
-        const response = await axios.get(API.GET_MY_BIDS, {
-          params: { telno: sessionTelno.value, matchNumber: matchNumber.value },
+        const response = await axios.get(APIs.GET_MY_BIDS, {
+          params: { telno: sessionTelno, matchNumber: matchNumber },
           withCredentials: true,
         });
 
@@ -321,8 +214,8 @@ export default {
 
     const fetchAllBids = async () => {
       try {
-        const response = await axios.get(API.GET_ALL_BIDS, {
-          params: { matchNumber: matchNumber.value },
+        const response = await axios.get(APIs.GET_ALL_BIDS, {
+          params: { matchNumber: matchNumber },
           withCredentials: true,
         });
 
@@ -368,9 +261,9 @@ export default {
             : [];
 
         if (seatNoArray.length > 0) {
-          // API 요청하여 좌석별 데이터를 가져옴
+          // APIs 요청하여 좌석별 데이터를 가져옴
           const response = await axios.post(
-            API.GET_BIDS_BY_SEATARRAY,
+            APIs.GET_BIDS_BY_SEATARRAY,
             { seatNoArray, matchNumber }, // 두 번째 인자는 데이터 (POST body)
             {
               withCredentials: true, // 세 번째 인자로 옵션 전달
@@ -407,16 +300,22 @@ export default {
       }
     };
 
-    const handleBidSubmit = async () => {
+    const handleSubmitBid = async (localBidAmounts, bidTotal) => {
+      // 최소 입찰가보다 낮은 입찰을 필터링하는 함수
+      const getMinBidPrice = (seat) => {
+        return seat.current_bid_amount > 0
+          ? seat.current_bid_amount
+          : seat.seat_price;
+      };
+
+      // 선택된 좌석 중 유효하지 않은 좌석 필터링
       const invalidSeats = selectedSeats.value.filter((seat) => {
-        const minBidPrice =
-          seat.current_bid_amount > 0
-            ? seat.current_bid_amount
-            : seat.seat_price;
+        const minBidPrice = getMinBidPrice(seat);
         const currentBid = bidAmounts.value[seat.uniqueSeatId] || 0;
         return currentBid <= minBidPrice;
       });
 
+      // 유효하지 않은 입찰이 있으면 경고 메시지를 표시하고 중단
       if (invalidSeats.length > 0) {
         const seatNumbers = invalidSeats.map((seat) => seat.seat_no).join(", ");
         alert(
@@ -425,16 +324,39 @@ export default {
         return;
       }
 
-      const confirmMessage = `입찰 금액 ${bidTotal.value}원으로 제출됩니다. 진행하시겠습니까?`;
-      const isConfirmed = window.confirm(confirmMessage);
+      // 총 입찰 금액 확인 메시지
+      const confirmMessage = `입찰 금액 ${bidTotal}원으로 제출됩니다. 진행하시겠습니까?`;
 
-      if (!isConfirmed) return;
+      Dialog.create({
+        title: "입찰 내용 제출",
+        message: confirmMessage,
+        cancel: true, // '취소' 버튼을 추가
+        persistent: true, // 모달 외부를 클릭해도 닫히지 않도록 설정
+        ok: {
+          label: "예",
+          color: "primary",
+        },
+        cancel: {
+          label: "아니오",
+          color: "negative",
+        },
+      })
+        .onOk(() => {
+          submitBid();
+        })
+        .onCancel(() => {
+          alert("제출이 취소되었습니다.");
+          return;
+        });
+    };
+
+    const submitBid = async () => {
       try {
         const response = await axios.post(
-          API.SUBMIT_BID,
+          APIs.SUBMIT_BID,
           {
-            telno: sessionTelno.value,
-            matchNumber: matchNumber.value,
+            telno: sessionTelno,
+            matchNumber: matchNumber,
             bidArray: selectedSeats.value.map((seat) => ({
               matchNumber: seat.match_no,
               seatNo: seat.seat_no,
@@ -471,29 +393,27 @@ export default {
         handleError(error);
       }
     };
-    const cancelBidSubmit = () => {
+
+    const handleCancelSubmit = () => {
       Dialog.create({
         title: "입찰 제출 취소",
         message: "모든 입력 내용이 취소됩니다. 진행하시겠습니까?",
         cancel: true, // '취소' 버튼을 추가
-        persistent: true, // 모달 외부를 클릭해도 닫히지 않도록 설정
+        persistent: true,
         ok: {
-          label: "예", // 확인 버튼을 '예'로 설정
+          label: "예",
           color: "primary",
         },
         cancel: {
-          label: "아니오", // 취소 버튼을 '아니오'로 설정
+          label: "아니오",
           color: "negative",
         },
       })
         .onOk(() => {
-          // '예' 버튼을 눌렀을 때 동작
+          //입력내용 취소
           selectedSeats.value = [];
-          alert("입력 내용이 취소되었습니다.");
         })
         .onCancel(() => {
-          // '아니오' 버튼을 눌렀을 때 동작
-          alert("작업을 계속합니다.");
           return;
         });
     };
@@ -525,10 +445,10 @@ export default {
     };
 
     const handlePaySubmit = () => {
-      localStorage.setItem("telno", sessionTelno.value);
+      localStorage.setItem("telno", sessionTelno);
       paymentData.value = {
         ...paymentData.value,
-        telno: sessionTelno.value,
+        telno: sessionTelno,
         price: totalWinAmount.value,
         goodName: `좌석입찰 총 ${totalWinCount.value} 건`,
       };
@@ -537,46 +457,43 @@ export default {
       const queryString = objectToQueryString(paymentData.value);
 
       // 리디렉션할 URL 생성
-      const redirectUrl = `${API.PG_START}?${queryString}`;
+      const redirectUrl = `${
+        isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START
+      }?${queryString}`;
 
       // 리디렉션 실행
       window.location.href = redirectUrl;
     };
 
+    function isMobile() {
+      // return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      return true;
+    }
+
     const handleSelectVenue = () => {
-      router.push(url.selectVenueUser);
+      handleLink(router, localSessionData.userClass, "selectVenue");
     };
 
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserName.value = response.data.userName;
-          sessionStorage.setItem("userName", sessionUserName.value);
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.userLogin);
-      }
+    const handleBackToLogin = () => {
+      handleLink(router, localSessionData.userClass, "login");
     };
 
-    const handleError = (error) => {
-      if (error.response) {
-        message.value = error.response.data;
-      } else if (error.request) {
-        message.value = messageCommon.ERR_NETWORK;
-      } else {
-        message.value = messageCommon.ERR_ETC;
-      }
+    const handleBackToBids = () => {
+      handleLink(router, localSessionData.userClass, "bids");
     };
 
+    const handleBackToSelect = () => {
+      alert("경기를 선택해주세요.");
+      handleLink(router, localSessionData.userClass, "selectVenue");
+    };
+
+    const resetLoginStatus = () => {
+      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+    };
     const restoreSession = async (sessionTelno, localSessionUserName) => {
       try {
         const response = await axios.post(
-          API.RESTORE_SESSION,
+          APIs.RESTORE_SESSION,
           {
             telno: sessionTelno,
             userName: localSessionUserName,
@@ -589,33 +506,11 @@ export default {
     };
 
     watch(
-      [selectedSeats, bidAmounts],
-      ([newSelectedSeats, newBidAmounts]) => {
-        if (newSelectedSeats && newBidAmounts) {
-          const minBidAmountCalc = newSelectedSeats.reduce((sum, seat) => {
-            const chosenAmount =
-              seat.current_bid_amount > 0
-                ? seat.current_bid_amount
-                : seat.seat_price;
-            return sum + (chosenAmount || 0);
-          }, 0);
-          minBidAmount.value = minBidAmountCalc;
-
-          const bidTotalCalc = newSelectedSeats.reduce((sum, seat) => {
-            return sum + (newBidAmounts[seat.uniqueSeatId] || 0);
-          }, 0);
-          bidTotal.value = bidTotalCalc;
-        }
-      },
-      { deep: true }
-    );
-
-    watch(
       [clickCount],
       () => {
         if (selectedSeats.value.length > 0) {
           fetchSeatData(
-            matchNumber.value,
+            matchNumber,
             selectedSeats.value,
             (data) => {
               selectedSeats.value = data;
@@ -630,7 +525,7 @@ export default {
     );
     const fetchData = async () => {
       try {
-        await fetchBidStatus(matchNumber.value);
+        await fetchBidStatus(matchNumber);
         await fetchMyLast();
         await fetchMyBids();
         await fetchAllBids();
@@ -639,46 +534,49 @@ export default {
       }
     };
 
-    const fetchSessionUserId1 = async () => {
+    const fetchSessionUserIdNew = async () => {
       try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
+        const response = await axios.get(APIs.GET_SESSION_USER, {
           withCredentials: true,
         });
-        sessionTelno.value = response.data.telno;
-        sessionUserName.value = response.data.userName;
-        sessionStorage.setItem("userName", sessionUserName.value);
+        sessionTelno = response.data.telno;
+        sessionUserName = response.data.userName;
+        sessionStorage.setItem("userName", sessionUserName);
 
         if (queryTelno.value) {
-          console.log("+++++++++++++입찰 화면으로 돌아왔습니다. ");
           await fetchData();
-          router.push(url.bidSeats);
+          handleBackToBids();
         } else {
           await fetchData();
         }
       } catch (error) {
         message.value = error.response ? error.response.data : error.response;
-        console.log("++++++++++++세션 없음 : " + message.value);
 
         if (queryTelno.value) {
-          console.log(
-            "+++++++++++++세션복구를 시도합니다. :" + queryTelno.value
-          );
           await restoreSession(queryTelno.value, localSessionUserName.value);
           console.log("+++++++++++++세션이 복구되었습니다.");
-          router.push(url.bidSeats);
+          handleBackToBids();
         } else {
-          alert("세션복구에 실패하였습니다. 다시 로그인을 해주세요.");
-          router.push(url.userLogin);
+          handleBackToLogin();
         }
       }
     };
+
+    const handleError = (error) => {
+      message.value = error.response
+        ? error.response.data
+        : error.request
+        ? messageCommon.ERR_NETWORK
+        : messageCommon.ERR_ETC;
+    };
+
     onMounted(async () => {
-      const localSessionMatchNumber = sessionStorage.getItem("matchNumber");
-      if (!localSessionMatchNumber) {
+      localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
+      matchNumber = localSessionData.matchNumber;
+      if (!matchNumber) {
         alert("경기를 먼저 선택해주세요.");
-        return router.push(url.selectMatchUser);
+        handleBackToSelect();
       }
-      matchNumber.value = localSessionMatchNumber;
       const queryString = window.location.search;
       const params = new URLSearchParams(queryString);
 
@@ -688,12 +586,9 @@ export default {
           "returned from payment----------- telno :" + queryTelno.value
         );
       }
-      await fetchSessionUserId1();
+      await fetchSessionUserIdNew();
     });
     return {
-      sessionTelno,
-      sessionUserName,
-      localSessionUserName,
       matchNumber,
       bidStatus,
       selectedSeats,
@@ -711,8 +606,8 @@ export default {
       fetchSeatData,
       formatTimeToLocal,
       handleSeatClick,
-      handleBidSubmit,
-      cancelBidSubmit,
+      handleSubmitBid,
+      handleCancelSubmit,
       toggleHistory,
       handleBidAmountChange,
       handlePaySubmit,

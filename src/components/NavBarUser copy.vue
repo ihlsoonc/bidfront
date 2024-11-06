@@ -18,8 +18,8 @@
         round
         dense
         label="경기장 선택"
-        @click="handleLinkAction('selectVenue')"
         :disable="!isLoggedIn"
+        @click="handleLinkAction('selectVenue')"
         v-if="$q.screen.gt.md"
       />
       &nbsp;&nbsp;&nbsp;&nbsp;
@@ -33,7 +33,7 @@
         v-if="$q.screen.gt.md"
       />
       &nbsp;&nbsp;&nbsp;&nbsp;
-      <!-- <q-btn
+      <q-btn
         flat
         round
         dense
@@ -42,7 +42,7 @@
         @click="handleLinkAction('login')"
         v-if="$q.screen.gt.md"
       />
-      &nbsp;&nbsp;&nbsp;&nbsp; -->
+      &nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
@@ -103,11 +103,11 @@ import { ref, toRefs, watch, onMounted } from "vue";
 const props = defineProps({
   isLoggedIn: {
     type: Boolean,
-    required: true,
+    default: false,
   },
   hasSelectedMatch: {
     type: Boolean,
-    required: true,
+    default: false,
   },
 });
 const emit = defineEmits(["link-action"]);
@@ -118,12 +118,28 @@ const leftDrawerOpen = ref(false);
 const handleLinkAction = (action) => {
   emit("link-action", action);
 };
+// const updateStatus = () => {
+//   isLoggedIn.value = props.isLoggedIn;
+// };
 
 const toggleDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value;
 };
 
-onMounted(() => {});
+// watch([() => props.isLoggedIn], () => {
+//   updateStatus();
+// });
+
+// isLoggedIn의 변경을 모니터링하여 로그 출력
+watch(isLoggedIn, (newValue, oldValue) => {
+  console.log("==========================isLoggedIn changed:", {
+    oldValue,
+    newValue,
+  });
+});
+onMounted(() => {
+  // updateStatus();
+});
 </script>
 
 <style scoped>

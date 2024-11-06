@@ -7,15 +7,16 @@
         </q-card-section>
 
         <q-card-section>
-          <q-form @submit="handleSubmit" class="q-gutter-md">
+          <q-form class="q-gutter-md">
             <q-input
               v-model="userData.query"
               label="전화번호"
-              hint="전화번호11자리"
+              hint="전화번호 11자리"
               filled
               type="tel"
               maxlength="11"
               minlength="11"
+              @update:model-value="revalidateUser"
             />
             <q-input
               v-model="userData.password"
@@ -23,8 +24,14 @@
               type="password"
               hint="비밀번호를 입력하세요"
               filled
+              @update:model-value="revalidateUser"
             />
-            <q-btn type="submit" label="로그인" color="primary" />
+            <q-btn
+              @click="handleSubmit"
+              type="submit"
+              label="로그인"
+              color="primary"
+            />
           </q-form>
         </q-card-section>
 
@@ -35,182 +42,155 @@
         <q-card-actions align="around">
           <q-btn
             label="비밀번호 찾기"
-            @click="handleFindPassword"
+            @click="navigate('password', 1)"
             flat
             color="standard"
           />
-          <q-btn label="비밀번호 변경" @click="handleChangePassword" flat />
-          <q-btn label="회원가입" @click="handleRegister" flat />
-          <q-btn label="알림톡" @click="handleSendAlimTalk" flat />
+          <q-btn label="비밀번호 변경" @click="navigate('password', 2)" flat />
+          <q-btn
+            v-if="isNotAdmin"
+            label="회원가입"
+            @click="navigate('register')"
+            flat
+          />
+          <q-btn label="알림톡" @click="sendAlimTalk" flat />
         </q-card-actions>
       </q-card>
     </div>
   </q-page>
 </template>
 
-<script>
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
+<script setup>
+import { ref, onMounted, defineEmits } from "vue";
 import axios from "axios";
-import { API, url, messageCommon } from "../utils/messagesAPIs";
+import { useRouter } from "vue-router";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { handleLink } from "../utils/handleLink";
 
-export default {
-  setup(props, { emit }) {
-    const userData = ref({
-      query: "",
-      password: "",
-    });
-    const sessionTelno = ref("");
-    const sessionUserName = ref("");
-    const tableName = ref("");
-    const message = ref("");
-    const router = useRouter();
+const router = useRouter();
+const emit = defineEmits(["update-status"]);
 
-    const handleFindPassword = () => {
-      if (tableName.value === "user") {
-        router.push({ path: url.changeUserPassword, query: { tab: 1 } });
-      } else {
-        router.push({ path: url.changeAdminPassword, query: { tab: 1 } });
-      }
-    };
+const userData = ref({ query: "", password: "" });
+const isNotAdmin = ref(false);
+const message = ref("");
+let localSessionData = {};
+let sessionResults = {};
 
-    const handleChangePassword = () => {
-      router.push({
-        path:
-          tableName.value === "user"
-            ? url.changeUserPassword
-            : url.changeAdminPassword,
-        query: { tab: 2 },
-      });
-    };
-    const handleSendAlimTalk = async () => {
-      const response = await axios.post(
-        API.SEND_KAKAO_ALIMTALK,
-        {
-          query: userData.value.query,
-          password: userData.value.password,
-          table: tableName.value,
-          queryType: "telno",
-        },
-        { withCredentials: true }
-      );
-    };
-    const handleRegister = () => {
-      router.push(
-        tableName.value === "user" ? url.registerUser : url.registerAdmin
-      );
-    };
+// 버튼 액션 핸들러
+const navigate = (action, tab) =>
+  handleLink(router, localSessionData.userClass, action, { tab });
 
-    const handleSubmit = async () => {
-      message.value = "";
-      try {
-        if (!validateInput(userData.value)) {
-          return;
-        }
-
-        const response = await axios.post(
-          API.USER_LOGIN,
-          {
-            query: userData.value.query,
-            password: userData.value.password,
-            table: tableName.value,
-            queryType: "telno",
-          },
-          { withCredentials: true }
-        );
-
-        if (response.status === 200) {
-          emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
-          router.push(
-            tableName.value === "user"
-              ? url.selectVenueUser
-              : url.selectVenueAdmin
-          );
-        }
-      } catch (error) {
-        handleError(error);
-      }
-    };
-
-    const validateInput = (data) => {
-      const { query, password } = data;
-      if (!query || query.trim() === "") {
-        alert("사용자 아이디 또는 전화번호를 입력해 주세요.");
-        return false;
-      }
-
-      if (!password || password.trim() === "") {
-        alert("비밀번호를 입력해 주세요.");
-        return false;
-      }
-
-      return true;
-    };
-
-    const resetSetting = () => {
-      userData.value = { query: "", password: "" };
-      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-    };
-
-    const handleError = (error) => {
-      if (error.response) {
-        message.value = error.response.data;
-      } else if (error.request) {
-        message.value = messageCommon.ERR_NETWORK;
-      } else {
-        message.value = messageCommon.ERR_ETC;
-      }
-    };
-
-    const fetchSessionTableName = () => {
-      const sessiontableName = sessionStorage.getItem("tableName");
-      if (sessiontableName) {
-        tableName.value = sessiontableName;
-      }
-    };
-
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status === 200) {
-          sessionTelno.value = response.data.telno;
-          sessionUserName.value = response.data.userName;
-          message.value = sessionUserName.value + "님은 로그인 상태입니다.";
-          emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
-        } else {
-          message.value = `로그인 해주세요.`;
-          resetSetting();
-        }
-      } catch (error) {
-        message.value = `로그인 해주세요.`;
-        resetSetting();
-      }
-    };
-
-    onMounted(() => {
-      fetchSessionTableName();
-      resetSetting();
-      fetchSessionUserId();
-    });
-
-    return {
-      userData,
-      sessionTelno,
-      sessionUserName,
-      message,
-      tableName,
-      handleSubmit,
-      handleFindPassword,
-      handleChangePassword,
-      handleRegister,
-      handleSendAlimTalk,
-    };
-  },
+// 알림톡 전송
+const sendAlimTalk = async () => {
+  try {
+    await axios.post(
+      APIs.SEND_KAKAO_ALIMTALK,
+      { query: userData.value.query, queryType: "telno" },
+      { withCredentials: true }
+    );
+  } catch (error) {
+    handleError(error);
+  }
 };
+
+// 로그인 요청
+const handleSubmit = async () => {
+  message.value = "";
+
+  if (!validateInput()) return;
+
+  try {
+    const response = await axios.post(
+      APIs.USER_LOGIN,
+      {
+        ...userData.value,
+        queryType: "telno",
+        table: localSessionData.tableName,
+        userClass: localSessionData.userClass,
+      },
+      { withCredentials: true }
+    );
+
+    if (response.status === 200) {
+      emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
+      navigate("selectVenue");
+    } else {
+      handlePermissionError(response.data.userType);
+    }
+  } catch (error) {
+    handleError(error);
+  }
+};
+
+// 입력 값 유효성 검사
+const validateInput = () => {
+  if (!userData.value.query.trim()) {
+    alert("전화번호를 입력해 주세요.");
+    return false;
+  }
+  if (!userData.value.password.trim()) {
+    alert("비밀번호를 입력해 주세요.");
+    return false;
+  }
+  return true;
+};
+
+// 권한 오류 처리
+const handlePermissionError = (userType) => {
+  const currentType = mapUserType(localSessionData.userClass);
+  message.value = `현재 시스템에 권한이 없습니다. db Type => ${userType} ${currentType}`;
+  resetLoginStatus();
+};
+
+// 사용자 유형 매핑
+const mapUserType = (userClass) =>
+  ({
+    user: "U",
+    adminm: "M",
+    admin: "H",
+    default: "unknown",
+  }[userClass] || "unknown");
+
+// 세션 로그인 상태 초기화
+const resetLoginStatus = () =>
+  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+
+// 세션 데이터 확인 및 초기 메시지 설정
+const initializeSession = async () => {
+  localSessionData = fetchLocalSession(["tableName", "userClass"]);
+  isNotAdmin.value = localSessionData.userClass !== "admin";
+
+  sessionResults = await fetchSessionUser(localSessionData.userClass);
+  if (sessionResults.success) {
+    message.value = `${sessionResults.userName}님은 로그인 상태입니다. (User Class: ${sessionResults.userClass})`;
+    emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
+  } else {
+    resetLoginStatus();
+    message.value = "로그인 해 주세요";
+  }
+};
+
+// 오류 메시지 처리
+const handleError = (error) => {
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
+};
+
+// 입력 변경 감지
+const revalidateUser = () => {
+  // 세션 데이터와 비교가 필요하면 여기에서 처리
+};
+
+onMounted(initializeSession);
 </script>
 
 <style scoped>
-/* 스타일을 Quasar에 맞게 조정할 수 있습니다. */
+.q-toolbar-title {
+  flex-grow: 1;
+}
 </style>

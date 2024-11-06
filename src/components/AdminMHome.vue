@@ -1,7 +1,7 @@
 <template>
   <q-layout view="hHh lpR fFf">
     <!-- 헤더 -->
-    <NavBarUser
+    <NavBarAdminM
       :isLoggedIn="isLoggedIn"
       :hasSelectedMatch="hasSelectedMatch"
       @link-action="handleLinkAction"
@@ -18,18 +18,18 @@
 import { ref, onMounted } from "vue";
 import { useQuasar } from "quasar";
 import { useRouter } from "vue-router";
-import NavBarUser from "./NavBarUser.vue";
+import NavBarAdminM from "./NavBarAdminM.vue";
 import { handleLink } from "../utils/handleLink";
 import { setLocalSession } from "../utils/setLocalSession";
 
 export default {
   name: "AdminMHome",
-  components: { NavBarUser },
+  components: { NavBarAdminM },
   setup() {
     const $q = useQuasar();
     const router = useRouter();
-    const userClass = "user";
-    const userTable = "user";
+    const userClass = "adminm";
+    const userTable = "admin";
     const isLoggedIn = ref(false);
     const hasSelectedMatch = ref(false);
 

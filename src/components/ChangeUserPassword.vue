@@ -26,10 +26,6 @@
             label="인증번호 발송"
             color="primary"
           />
-          <q-banner v-if="telmsg" class="bg-warning text-white q-mt-md">
-            {{ telmsg }}
-          </q-banner>
-
           <!-- 인증번호 입력 -->
           <div v-if="codeInputMode" class="q-mt-md">
             <q-input
@@ -68,7 +64,7 @@
             :readonly="isValidUser"
           />
           <q-btn
-            @click="handleValidate"
+            @click="handleValidateUser"
             label="확인"
             color="primary"
             class="q-mt-md"
@@ -114,7 +110,13 @@
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
-import { API, messageCommon } from "../utils/messagesAPIs";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+let userClass = "";
+let localSessionData = {};
+const route = useRoute();
 const activeTab = ref("");
 const id = ref("");
 const currentPassword = ref("");
@@ -124,10 +126,7 @@ const isValidTelno = ref(false);
 const isValidUser = ref(false);
 const userData = ref({ telno: "", authNumber: "" });
 const codeInputMode = ref(false);
-const telmsg = ref("");
 const message = ref("");
-const route = useRoute();
-const sessionTableName = ref("");
 
 // 전화번호 인증 요청
 const handleTelnoCheck = async () => {
@@ -144,21 +143,22 @@ const handleTelnoCheck = async () => {
     return false;
   }
   try {
-    const response = await axios.post(API.SEND_ONE_SMS, userData.value);
+    const response = await axios.post(APIs.SEND_ONE_SMS, userData.value);
 
     if (response.status === 200) {
-      telmsg.value =
+      message.value =
         response.data.message + "code: " + response.data.verificationCode;
       codeInputMode.value = true;
     }
   } catch (error) {
-    telmsg.value = error.response.data;
+    message.value = error.response.data;
+    codeInputMode.value = true; //test에서
   }
 };
 
 // 전화번호 변경 확인
 const checkTelNumber = () => {
-  telmsg.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
+  message.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
   isValidTelno.value = false;
 };
 
@@ -172,33 +172,32 @@ const checkAuthNumber = () => {
 // 인증번호 비교
 const compareAuthNumber = async () => {
   try {
-    const response = await axios.post(API.VERIFY_CODE, userData.value);
+    const response = await axios.post(APIs.VERIFY_CODE, userData.value);
 
     if (response.status === 200) {
-      telmsg.value = response.data.message;
+      message.value = response.data.message;
       isValidTelno.value = true;
       codeInputMode.value = false;
       userData.value.authNumber = "";
-      telmsg.value = "";
     }
   } catch (error) {
-    telmsg.value = error.response.data;
+    message.value = error.response.data;
   }
 };
 
 // 비밀번호 변경 유효성 확인
-const handleValidate = async () => {
+const handleValidateUser = async () => {
   if (!id.value || !currentPassword.value) {
     message.value = "전화번호와 현재 비밀번호를 입력해 주세요.";
     return;
   }
 
   try {
-    const response = await axios.post(API.GET_USER_INFO, {
+    const response = await axios.post(APIs.GET_USER_INFO, {
       query: id.value,
       queryType: "telno",
       password: currentPassword.value,
-      table: sessionTableName.value,
+      table: localSessionData.tableName,
     });
 
     if (response.status === 200) {
@@ -214,7 +213,7 @@ const handleValidate = async () => {
 const cancelChange = async () => {
   isValidUser.value = false;
   isValidTelno.value = false;
-  telmsg.value = "";
+  message.value = "";
 };
 
 // 비밀번호 변경
@@ -231,10 +230,10 @@ const changePassword = async () => {
 
   try {
     const paramId = isValidTelno.value ? userData.value.telno : id.value;
-    const response = await axios.post(API.CHANGE_USER_PASSWORD, {
+    const response = await axios.post(APIs.CHANGE_USER_PASSWORD, {
       telno: paramId,
       password: newPassword.value,
-      table: sessionTableName.value,
+      table: localSessionData.tableName,
     });
 
     if (response.status === 200) {
@@ -252,20 +251,18 @@ const changePassword = async () => {
 
 // 에러 처리
 const handleError = (error) => {
-  if (error.response) {
-    message.value = error.response.data;
-  } else if (error.request) {
-    message.value = messageCommon.ERR_NETWORK;
-  } else {
-    message.value = messageCommon.ERR_ETC;
-  }
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
 };
 
 // 컴포넌트가 마운트될 때 실행
 onMounted(() => {
+  localSessionData = fetchLocalSession(["tableName", "userClass"]);
   const tabQuery = route.query.tab;
   activeTab.value = tabQuery === "2" ? "changePassword" : "resetPassword";
-  sessionTableName.value = sessionStorage.getItem("tableName");
 });
 </script>
 

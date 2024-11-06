@@ -1,6 +1,6 @@
 const routes = [
   // {
-  //   path: "/",
+  //   name: "/",
   //   redirect: "/admin", // 루트 경로로 접근 시 /admin으로 리다이렉트
   // },
   {
@@ -8,43 +8,43 @@ const routes = [
     component: () => import("components/UserHome.vue"),
     children: [
       {
-        path: "userlogin",
         name: "userLogin",
+        path: "userlogin",
         component: () => import("components/UserLogin.vue"),
       },
       {
-        path: "changeuserpassword",
         name: "changeUserPassword",
+        path: "changeuserpassword",
         component: () => import("components/ChangeUserPassword.vue"),
       },
       {
-        path: "registeruser",
         name: "registerUser",
+        path: "registeruser",
         component: () => import("components/RegisterUser.vue"),
       },
       {
-        path: "updateuser",
         name: "updateUser",
+        path: "updateuser",
         component: () => import("components/UpdateUser.vue"),
       },
       {
-        path: "userlogout",
         name: "userLogout",
+        path: "userlogout",
         component: () => import("components/UserLogout.vue"),
       },
       {
-        path: "selectvenue",
-        name: "selectVenue",
+        name: "selectVenueUser",
+        path: "selectvenueuser",
         component: () => import("components/SelectVenue.vue"),
       },
       {
-        path: "bidseats",
         name: "bidSeats",
+        path: "bidseats",
         component: () => import("components/BidSeats.vue"),
       },
       {
-        path: "selectmatchuser",
         name: "selectMatchUser",
+        path: "selectmatchuser",
         component: () => import("components/SelectMatch.vue"),
       },
     ],
@@ -54,67 +54,114 @@ const routes = [
     component: () => import("components/AdminHome.vue"), // 관리자 기본 레이아웃
     children: [
       {
-        path: "adminlogin",
         name: "adminLogin",
+        path: "adminlogin",
         component: () => import("components/UserLogin.vue"),
       }, // 관리자 로그인
       {
-        path: "adminlogout",
         name: "adminLogout",
+        path: "adminlogout",
         component: () => import("components/UserLogout.vue"),
       }, // 관리자 로그아웃
       {
-        path: "registeradmin",
         name: "registerAdmin",
+        path: "registeradmin",
         component: () => import("components/RegisterUser.vue"),
       }, // 관리자 등록
       {
-        path: "updateadmin",
         name: "updateAdmin",
+        path: "updateadmin",
         component: () => import("components/UpdateUser.vue"),
       }, // 관리자 정보 수정
       {
-        path: "changeadminpassword",
         name: "changeAdminPassword",
+        path: "changeadminpassword",
         component: () => import("components/ChangeUserPassword.vue"),
       }, // 관리자 비밀번호 변경
       {
-        path: "selectvenueadmin",
         name: "selectVenueAdmin",
+        path: "selectvenueadmin",
         component: () => import("components/SelectVenue.vue"),
       }, // 경기장 선택
       {
-        path: "selectmatchadmin",
         name: "selectMatchAdmin",
+        path: "selectmatchadmin",
         component: () => import("components/SelectMatch.vue"),
       }, // 경기 선택
       {
-        path: "bidresults",
-        name: "bidResults",
+        name: "bidResultsAdmin",
+        path: "bidresultsadmin",
         component: () => import("components/BidResults.vue"),
       }, // 입찰 결과
       {
-        path: "managematch",
-        name: "manageMatch",
+        name: "manageMatchAdmin",
+        path: "managematchadmin",
         component: () => import("components/ManageMatch.vue"),
       }, // 경기 관리
       {
-        path: "approvematch",
-        name: "approveMatch",
+        name: "approveMatchAdmin",
+        path: "approvematchadmin",
         component: () => import("components/ApproveMatch.vue"),
       }, // 경기 승인
       {
-        path: "managevenue",
-        name: "ManageVenue",
+        name: "manageVenueAdmin",
+        path: "managevenueadmin",
         component: () => import("components/ManageVenue.vue"),
       }, // 경기장 관리
       {
-        path: "updateseatprice",
-        name: "updateSeatPrice",
+        name: "updateSeatPriceAdmin",
+        path: "updateseatpriceadmin",
         component: () => import("components/UpdateSeatPrice.vue"),
       }, // 좌석 가격 수정
     ],
   },
+  {
+    path: "/adminm",
+    component: () => import("components/AdminMHome.vue"), // 관리자 기본 레이아웃
+    children: [
+      {
+        name: "adminMLogin",
+        path: "adminmlogin",
+        component: () => import("components/UserLogin.vue"),
+      }, // 관리자 로그인
+      {
+        name: "adminMLogout",
+        path: "adminmlogout",
+        component: () => import("components/UserLogout.vue"),
+      }, // 관리자 로그아웃
+      {
+        name: "registerAdminM",
+        path: "registeradminm",
+        component: () => import("components/RegisterUser.vue"),
+      }, // 관리자 등록
+      {
+        name: "updateAdminM",
+        path: "updateadminm",
+        component: () => import("components/UpdateUser.vue"),
+      }, // 관리자 정보 수정
+      {
+        name: "changeAdminMPassword",
+        path: "changeadminmpassword",
+        component: () => import("components/ChangeUserPassword.vue"),
+      }, // 관리자 비밀번호 변경
+      {
+        name: "selectVenueAdminM",
+        path: "selectvenueadminm",
+        component: () => import("components/SelectVenue.vue"),
+      }, // 경기장 선택
+      {
+        name: "selectMatchAdminM",
+        path: "selectmatchadminm",
+        component: () => import("components/SelectMatch.vue"),
+      }, // 경기 선택
+      {
+        name: "manageMatchAdminM",
+        path: "managematchadminm",
+        component: () => import("components/ManageMatch.vue"),
+      }, // 경기 관리
+    ],
+  },
+
   {
     path: "/:catchAll(.*)*",
     component: () => import("pages/ErrorNotFound.vue"),

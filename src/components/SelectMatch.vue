@@ -7,7 +7,7 @@
       <q-card
         v-for="(match, index) in matchArray"
         :key="index"
-        @click="handleSelect(index)"
+        @click="handleSelectMatch(index)"
         :class="{ 'bg-primary text-white': selectedButton === index }"
         class="q-mb-md q-pa-md match-card"
         clickable
@@ -45,135 +45,129 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
 import axios from "axios";
-import { url, API, messageCommon } from "../utils/messagesAPIs";
-import { formatTimeToLocal } from "../utils/commonFunction.js";
+import { useRouter } from "vue-router";
+import { formatTimeToLocal } from "../utils/formatTimeToLocal";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { setLocalSession } from "../utils/setLocalSession";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { handleLink } from "../utils/handleLink";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
 
 export default {
   setup(props, { emit }) {
-    const sessionTelno = ref("");
-    const sessionUserType = ref("");
+    // 상수 및 설정 관련 변수
+    const apiMap = {
+      U: "GET_ALL_APPROVED_MATCHES", // 일반 사용자
+      H: "GET_ALLMATCHES", // 총괄 관리자
+      M: "GET_MYMATCHES", // 대회 등록자
+    };
+    const router = useRouter();
+
+    // 세션 관련 변수
+    let sessionResults = {};
+    let localSessionData = {};
+
+    // 반응형 변수
     const isAdmin = ref(false);
-    const tableName = ref("");
     const matchArray = ref([]);
     const selectedButton = ref(null);
     const message = ref("");
-    const router = useRouter();
 
     const fetchMatches = async () => {
-      let api;
-      if (tableName.value === "user") {
-        api = "GET_ALL_APPROVED_MATCHES";
-      } else if (tableName.value === "admin") {
-        api = "GET_ALLMATCHES";
-      }
+      const selectedApi = apiMap[sessionResults.userType];
       try {
-        const response = await axios.get(API[api], {
+        const response = await axios.get(APIs[selectedApi], {
           params: {
-            telno: sessionTelno.value,
-            userType: sessionUserType.value,
+            telno: sessionResults.telno,
+            venueCd: localSessionData.venueCd,
           },
         });
-        if (response.status === 200) {
-          matchArray.value = response.data.map((match) => {
-            const { bid_open_datetime, bid_close_datetime, bid_open_status } =
-              match;
-
-            let statusCode = "";
-            if (bid_open_status === "F") {
-              statusCode = "낙찰종료";
-            } else if (bid_open_datetime && bid_close_datetime) {
-              const bidOpenDate = new Date(bid_open_datetime);
-              const bidCloseDate = new Date(bid_close_datetime);
-              const now = new Date();
-
-              if (now < bidOpenDate) {
-                statusCode = "입찰 시작 전";
-              } else if (now > bidCloseDate) {
-                statusCode = "입찰 종료";
-              } else {
-                statusCode = "입찰 중";
-              }
-            } else {
-              statusCode = "상태 정보 없음";
-            }
-
-            return {
-              ...match,
-              statusCode,
-            };
-          });
-        }
+        matchArray.value = response.data.map((match) => ({
+          ...match,
+          statusCode: getBidStatus(
+            match.bid_open_datetime,
+            match.bid_close_datetime,
+            match.bid_open_status
+          ),
+        }));
       } catch (error) {
         handleError(error);
       }
     };
 
-    const handleSelect = (index) => {
+    const getBidStatus = (
+      bid_open_datetime,
+      bid_close_datetime,
+      bid_open_status
+    ) => {
+      if (bid_open_status === "F") return "낙찰종료";
+      if (!bid_open_datetime || !bid_close_datetime) return "상태 정보 없음";
+
+      const now = new Date();
+      const bidOpenDate = new Date(bid_open_datetime);
+      const bidCloseDate = new Date(bid_close_datetime);
+
+      if (now < bidOpenDate) return "입찰 시작 전";
+      if (now > bidCloseDate) return "입찰 종료";
+      return "입찰 중";
+    };
+
+    const handleSelectMatch = (index) => {
       const match = matchArray.value[index];
-      sessionStorage.setItem("matchNumber", match.match_no);
+      setLocalSession(localSessionData.userClass, {
+        matchNumber: match.match_no,
+      });
       selectedButton.value = selectedButton.value === index ? null : index;
       message.value = "";
       emit("update-status", {
         isLoggedIn: true,
         hasSelectedMatch: true,
       });
-      if (tableName.value === "user") {
-        router.push(url.bidSeats);
-      } else if (tableName.value === "admin") {
-        router.push(url.bidResults);
-      }
+      handleLink(router, localSessionData.userClass, "bids");
     };
 
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
+    const handleBackToLogin = () => {
+      handleLink(router, localSessionData.userClass, "login");
+    };
 
-        if (response.data == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserType.value = response.data.userType;
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.adminLogin);
-      }
+    const resetLoginStatus = () => {
+      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
     };
 
     const handleError = (error) => {
-      if (error.response) {
-        message.value = error.response.data;
-      } else if (error.request) {
-        message.value = messageCommon.ERR_NETWORK;
-      } else {
-        message.value = messageCommon.ERR_ETC;
-      }
+      message.value = error.response
+        ? error.response.data
+        : error.request
+        ? messageCommon.ERR_NETWORK
+        : messageCommon.ERR_ETC;
     };
 
     onMounted(async () => {
-      const sessiontableName = sessionStorage.getItem("tableName");
-      if (sessiontableName) {
-        tableName.value = sessiontableName;
-      }
-      if (tableName.value === "admin") {
+      localSessionData = fetchLocalSession([
+        "tableName",
+        "userClass",
+        "venueCd",
+      ]);
+      if (localSessionData.tableName === "admin") {
         isAdmin.value = true;
       }
-
-      await fetchSessionUserId();
+      sessionResults = await fetchSessionUser(localSessionData.userClass);
+      if (!sessionResults.success) {
+        resetLoginStatus();
+        handleBackToLogin();
+      }
       await fetchMatches();
     });
 
     return {
-      sessionTelno,
-      sessionUserType,
       isAdmin,
       matchArray,
       selectedButton,
       message,
       formatTimeToLocal,
-      handleSelect,
+      handleSelectMatch,
     };
   },
 };

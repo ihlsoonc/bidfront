@@ -10,9 +10,9 @@
         @click="toggleDrawer"
         v-if="$q.screen.lt.md"
       />
-      <q-toolbar-title>입찰 시스템 관리자용 시스템</q-toolbar-title>
+      <q-toolbar-title>입찰 시스템 대회 등록</q-toolbar-title>
 
-      <!-- 데스크탑에서만 버튼 표시 -->
+      <!-- 데스크탑용 버튼들 -->
       <q-btn
         flat
         round
@@ -21,18 +21,7 @@
         @click="handleLinkAction('selectVenue')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        label="입찰현황 및 낙찰진행"
-        @click="handleLinkAction('bidResults')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
@@ -41,38 +30,16 @@
         @click="handleLinkAction('manageMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
-        label="대회승인"
-        @click="handleLinkAction('approveMatch')"
+        label="사용자정보수정"
+        @click="handleLinkAction('updateUser')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        label="좌석가격입력"
-        @click="handleLinkAction('updateSeatPrice')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        label="경기장 등록 및 수정"
-        @click="handleLinkAction('manageVenue')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
       <q-btn
         flat
@@ -91,56 +58,36 @@
     <q-list>
       <q-item
         clickable
+        v-ripple
         @click="handleLinkAction('selectVenue')"
-        :disabled="!isLoggedIn"
+        :class="{ disabled: !isLoggedIn }"
       >
-        <q-item-section>경기장 선택</q-item-section>
+        <q-item-section>경기장선택</q-item-section>
       </q-item>
-
       <q-item
         clickable
-        @click="handleLinkAction('bidResults')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-      >
-        <q-item-section>입찰현황 및 낙찰진행</q-item-section>
-      </q-item>
-
-      <q-item
-        clickable
+        v-ripple
         @click="handleLinkAction('manageMatch')"
-        :disable="!isLoggedIn"
+        :class="{ disabled: !isLoggedIn }"
       >
         <q-item-section>대회관리</q-item-section>
       </q-item>
-
       <q-item
         clickable
-        @click="handleLinkAction('approveMatch')"
-        :disable="!isLoggedIn"
+        v-ripple
+        @click="handleLinkAction('updateUser')"
+        :class="{ disabled: !isLoggedIn }"
       >
-        <q-item-section>대회승인</q-item-section>
+        <q-item-section>사용자정보수정</q-item-section>
       </q-item>
-
+      <q-item clickable v-ripple @click="handleLinkAction('login')">
+        <q-item-section>로그인</q-item-section>
+      </q-item>
       <q-item
         clickable
-        @click="handleLinkAction('updateSeatPrice')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-      >
-        <q-item-section>좌석가격입력</q-item-section>
-      </q-item>
-
-      <q-item
-        clickable
-        @click="handleLinkAction('manageVenue')"
-        :disable="!isLoggedIn"
-      >
-        <q-item-section>경기장 등록 및 수정</q-item-section>
-      </q-item>
-
-      <q-item
-        clickable
+        v-ripple
         @click="handleLinkAction('logout')"
-        :disable="!isLoggedIn"
+        :class="{ disabled: !isLoggedIn }"
       >
         <q-item-section>로그아웃</q-item-section>
       </q-item>
@@ -152,7 +99,7 @@
 import { ref, watch, onMounted } from "vue";
 
 export default {
-  name: "NavBarAdmin",
+  name: "NavBarAdminM",
   emits: ["link-action"],
   props: {
     isLoggedIn: {
@@ -168,8 +115,9 @@ export default {
     const isLoggedIn = ref(props.isLoggedIn);
     const leftDrawerOpen = ref(false);
 
+    // 링크 클릭 시 이벤트를 emit합니다.
     const handleLinkAction = (action) => {
-      emit("link-action", action); // 여기와 일치
+      emit("link-action", action);
     };
 
     const updateStatus = () => {
@@ -180,9 +128,13 @@ export default {
       leftDrawerOpen.value = !leftDrawerOpen.value;
     };
 
-    watch([() => props.isLoggedIn], () => {
-      updateStatus();
-    });
+    // 로그인 상태를 감지합니다.
+    watch(
+      () => props.isLoggedIn,
+      () => {
+        updateStatus();
+      }
+    );
 
     onMounted(() => {
       updateStatus();
@@ -198,5 +150,11 @@ export default {
 </script>
 
 <style scoped>
-/* Quasar 기본 스타일 활용 */
+.q-toolbar-title {
+  flex-grow: 1;
+}
+
+.q-btn {
+  margin-right: 10px;
+}
 </style>

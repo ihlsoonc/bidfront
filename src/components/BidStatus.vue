@@ -41,7 +41,7 @@
 
 <script>
 import { defineComponent, computed } from "vue";
-import { formatTimeToLocal } from "../utils/commonFunction";
+import { formatTimeToLocal } from "../utils/formatTimeToLocal";
 
 export default defineComponent({
   name: "BidStatus",
@@ -89,16 +89,5 @@ export default defineComponent({
 <style scoped>
 .bold-text {
   font-weight: bold;
-}
-
-/* 작은 화면 대응 */
-@media (max-width: 600px) {
-  .q-item-label {
-    font-size: 14px;
-  }
-
-  .q-item-section {
-    font-size: 12px;
-  }
 }
 </style>

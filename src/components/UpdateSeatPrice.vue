@@ -153,21 +153,24 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
+import axios from "axios";
 import { Dialog } from "quasar";
 import BidStatus from "./BidStatus.vue";
-import { url, API, messageCommon } from "../utils/messagesAPIs";
-
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
+import { handleLink } from "../utils/handleLink";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
 export default {
   components: {
     BidStatus,
   },
   setup() {
     const router = useRouter();
-    const sessionTelno = ref("");
-    const sessionUserType = ref("");
-    const matchNumber = ref("0");
+    let matchNumber = 0;
+    let localSessionData = {};
+    let sesseionResults = {};
     const bidStatus = ref({});
     const seatArray = ref([]);
     const seatArrayToDelete = ref([]);
@@ -211,11 +214,11 @@ export default {
       { name: "actions", label: "", align: "right" },
     ];
 
-    const fetchBidStatus = async (sessionMatchNumber) => {
+    const fetchBidStatus = async (matchNumber) => {
       try {
         const response = await axios.get(
-          API.GET_BIDSTATUS,
-          { params: { matchNumber: sessionMatchNumber } },
+          APIs.GET_BIDSTATUS,
+          { params: { matchNumber: matchNumber } },
           { withCredentials: true }
         );
         if (response.status === 200 && response.data) {
@@ -230,14 +233,14 @@ export default {
       }
     };
 
-    const fetchSeats = async (sessionMatchNumber) => {
+    const fetchSeats = async (matchNumber) => {
       try {
-        const response = await axios.get(API.GET_SEATPRICE, {
-          params: { matchNumber: sessionMatchNumber },
+        const response = await axios.get(APIs.GET_SEATPRICE, {
+          params: { matchNumber: matchNumber },
         });
         seatArray.value = response.data.map((seat) => ({
           ...seat,
-          matchNumber: sessionMatchNumber,
+          matchNumber: matchNumber,
         }));
         originalSeats.value = JSON.parse(JSON.stringify(response.data));
       } catch (error) {
@@ -291,7 +294,7 @@ export default {
         col_no: "",
         seat_no: String(lastSeatNo + 1), // 좌석 번호를 마지막 번호 + 1로 설정
         seat_price: 0,
-        matchNumber: matchNumber.value,
+        matchNumber: matchNumber,
       };
 
       seatArray.value = [...seatArray.value, newSeat];
@@ -344,7 +347,7 @@ export default {
         col_no: "",
         seat_no: String(startSeatNumber.value + index),
         seat_price: basePrice.value,
-        matchNumber: matchNumber.value,
+        matchNumber: matchNumber,
       }));
 
       seatArray.value = [...newSeats];
@@ -387,7 +390,7 @@ export default {
       if (!userConfirmed) return;
 
       try {
-        const response = await axios.post(API.UPDATE_SEATPRICEARRAY, {
+        const response = await axios.post(APIs.UPDATE_SEATPRICEARRAY, {
           seatPriceArray: updatedSeatArray,
         });
 
@@ -405,46 +408,39 @@ export default {
     };
 
     const handleError = (error) => {
-      if (error.response) {
-        message.value = error.response.data;
-      } else if (error.request) {
-        message.value = messageCommon.ERR_NETWORK;
-      } else {
-        message.value = messageCommon.ERR_ETC;
-      }
+      message.value = error.response
+        ? error.response.data
+        : error.request
+        ? messageCommon.ERR_NETWORK
+        : messageCommon.ERR_ETC;
     };
 
-    const fetchSessionUserId = async () => {
-      try {
-        const response = await axios.get(API.GET_SESSION_USERID, {
-          withCredentials: true,
-        });
-        if (response.status == "200") {
-          sessionTelno.value = response.data.telno;
-          sessionUserType.value = response.data.userType;
-        }
-      } catch (error) {
-        alert("로그인이 필요합니다.");
-        router.push(url.adminLogin);
-      }
+    const handleBackToLogin = () => {
+      handleLink(router, localSessionData.userClass, "login");
     };
-
+    const resetLoginStatus = () => {
+      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+    };
     onMounted(async () => {
-      const sessionMatchNumber = sessionStorage.getItem("matchNumber");
-      if (sessionMatchNumber) {
-        matchNumber.value = sessionMatchNumber;
-        await fetchSessionUserId();
-        await fetchBidStatus(sessionMatchNumber);
-        await fetchSeats(sessionMatchNumber);
+      localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
+      (matchNumber = localSessionData), matchNumber;
+      if (matchNumber) {
+        const sesseionResults = await fetchSessionUser(
+          localSessionData.userClass
+        );
+        if (!sesseionResults.success) {
+          resetLoginStatus();
+          handleBackToLogin();
+        }
+        await fetchBidStatus(localSessionData.matchNumber);
+        await fetchSeats(localSessionData.matchNumber);
       } else {
         alert("경기를 먼저 선택해주세요.");
-        router.push(url.selectMatchAdmin);
+        handleLink(router, localSessionData.userClass, "selectMatch");
       }
     });
 
     return {
-      sessionTelno,
-      sessionUserType,
       seatArray,
       matchNumber,
       bidStatus,

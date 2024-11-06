@@ -137,12 +137,14 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
-import { useRouter } from "vue-router";
-import { formatTimeToLocal } from "../utils/commonFunction";
-import { url, API, messageCommon } from "../utils/messagesAPIs";
+import { formatTimeToLocal } from "../utils/formatTimeToLocal";
+import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { APIs } from "../utils/APIs";
+import { messageCommon } from "../utils/messageCommon";
 
-const sessionTelno = ref("");
-const sessionUserType = ref("");
+let sessionResults = {};
+let localSessionData = {};
 const matchArray = ref([]);
 const matchData = ref({
   matchNumber: "",
@@ -159,7 +161,6 @@ const canApprove = ref(false);
 const canDisapprove = ref(false);
 const canViewFile = ref(false);
 const message = ref("");
-const router = useRouter();
 
 const columns = [
   { name: "match_no", label: "경기 번호", align: "left", field: "match_no" },
@@ -202,8 +203,11 @@ const guideMessage = computed(() => {
 
 const fetchMatches = async () => {
   try {
-    const response = await axios.get(API.GET_ALLMATCHES, {
-      params: { telno: sessionTelno.value, userType: sessionUserType.value },
+    const response = await axios.get(APIs.GET_ALLMATCHES, {
+      params: {
+        telno: sessionResults.telno,
+        userType: sessionResults.userType,
+      },
     });
     if (response.status === 200) {
       matchArray.value = response.data;
@@ -256,11 +260,11 @@ const handleSubmit = async () => {
     let actionType = canDisapprove.value ? "N" : "Y";
     const requestData = {
       ...matchData.value,
-      telno: sessionTelno.value,
-      userType: sessionUserType.value,
+      telno: sessionResults.telno,
+      userType: sessionResults.userType,
       actionType,
     };
-    const response = await axios.post(API.APPROVE_MATCH, requestData);
+    const response = await axios.post(APIs.APPROVE_MATCH, requestData);
     if (response.status === 200) {
       message.value = "성공적으로 작업이 수행되었습니다.";
       fetchMatches();
@@ -281,7 +285,7 @@ const downloadFile = async (fileName) => {
     return;
   }
   try {
-    const response = await axios.get(API.DOWNLOAD_MATCHINFO, {
+    const response = await axios.get(APIs.DOWNLOAD_MATCHINFO, {
       params: { fileName },
       responseType: "blob",
     });
@@ -297,15 +301,19 @@ const downloadFile = async (fileName) => {
     console.error(`파일 다운로드 오류: ${error.message}`);
   }
 };
+const handleBackToLogin = () => {
+  handleLink(router, localSessionData.userClass, "login");
+};
+const resetLoginStatus = () => {
+  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+};
 
 const handleError = (error) => {
-  if (error.response) {
-    message.value = error.response.data;
-  } else if (error.request) {
-    message.value = messageCommon.ERR_NETWORK;
-  } else {
-    message.value = messageCommon.ERR_ETC;
-  }
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
 };
 
 const resetState = () => {
@@ -314,7 +322,16 @@ const resetState = () => {
   canViewFile.value = false;
 };
 
-onMounted(fetchMatches);
+onMounted(async () => {
+  localSessionData = fetchLocalSession(["tableName", "userClass", "venueCd"]);
+  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+
+  if (!sessionResults.success) {
+    resetLoginStatus();
+    handleBackToLogin();
+  }
+  await fetchMatches();
+});
 </script>
 
 <style scoped></style>
