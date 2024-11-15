@@ -5,12 +5,17 @@
 
       <q-page-container>
         <q-page class="q-pa-md">
-          <q-banner
-            v-if="!matchArray || matchArray.length === 0"
-            type="warning"
-          >
-            현재 정보가 없습니다.
-          </q-banner>
+          <!-- 경기 정보가 없을 경우 표시 -->
+          <q-card v-if="!matchArray || matchArray.length === 0">
+            <br />
+            <br />
+            <br />
+            <q-banner>현재 대회 정보가 없습니다.</q-banner>
+            <br />
+            <br />
+            <br />
+          </q-card>
+          <!-- 경기 테이블 -->
           <q-table
             v-if="matchArray.length > 0"
             :rows="matchArray"
@@ -19,43 +24,49 @@
             flat
             dense
           >
+            <!-- 각 행의 동작 버튼 -->
             <template v-slot:body-cell-actions="props">
               <q-td :props="props">
                 <q-btn
                   v-if="props.row.approved !== 'Y'"
+                  push
+                  color="white"
+                  text-color="blue-grey-14"
                   label="승인"
-                  color="primary"
                   @click="handleApprove(props.row)"
-                  flat
                 />
                 <q-btn
                   v-if="props.row.approved === 'Y'"
-                  label="승인취소"
-                  color="negative"
+                  push
+                  color="white"
+                  text-color="deep-orange-14"
+                  label="취소"
                   @click="handleResetApprove(props.row)"
-                  flat
                 />
                 <q-btn
+                  push
+                  color="white"
+                  text-color="blue-grey-14"
                   label="첨부 다운로드"
-                  color="secondary"
                   :disable="!props.row.filename_attached"
                   icon="download"
                   @click="downloadFile(props.row.filename_attached)"
-                  flat
                 />
               </q-td>
             </template>
           </q-table>
-
+          <!-- 승인/취소 및 파일 확인용 카드 -->
           <q-card
             v-if="canApprove || canDisapprove || canViewFile"
             class="q-mt-lg"
           >
             <q-card-section>
+              <!-- 사용자 안내 메시지 -->
               <q-banner v-if="guideMessage" class="q-mb-md">{{
                 guideMessage
               }}</q-banner>
 
+              <!-- 경기 상세 정보 -->
               <q-form class="q-gutter-md q-gutter-sm-md-up">
                 <q-input
                   v-model="matchData.matchNumber"
@@ -111,6 +122,7 @@
                 />
               </q-form>
 
+              <!-- 확인 및 취소 버튼 -->
               <div class="row">
                 <q-btn
                   :disable="!canDisapprove && !canApprove && !canViewFile"
@@ -120,6 +132,9 @@
                 />
                 <q-btn
                   :disable="!canDisapprove && !canApprove && !canViewFile"
+                  push
+                  color="white"
+                  text-color="deep-orange-14"
                   label="취소"
                   @click="handleSubmitCancel"
                   class="q-mt-md col-xs-12 col-sm-6"
@@ -127,24 +142,22 @@
               </div>
             </q-card-section>
           </q-card>
+          <!-- 성공 메시지 -->
           <q-banner v-if="message" class="q-mt-lg">{{ message }}</q-banner>
         </q-page>
       </q-page-container>
     </q-layout>
   </q-page>
 </template>
-
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import { fetchLocalSession } from "../utils/fetchLocalSession";
-import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-let sessionResults = {};
-let localSessionData = {};
+// 경기 정보 데이터를 저장하는 변수
 const matchArray = ref([]);
 const matchData = ref({
   matchNumber: "",
@@ -157,42 +170,22 @@ const matchData = ref({
   isBidAvailable: "",
   fileName: "",
 });
+
+// 버튼 활성화 상태 관리
 const canApprove = ref(false);
 const canDisapprove = ref(false);
 const canViewFile = ref(false);
+
+// 메시지 표시용
 const message = ref("");
 
+// 경기 테이블의 열 정보
 const columns = [
   { name: "match_no", label: "경기 번호", align: "left", field: "match_no" },
-  {
-    name: "venue_name",
-    label: "경기장 이름",
-    align: "left",
-    field: "venue_name",
-  },
-  { name: "match_name", label: "경기명", align: "left", field: "match_name" },
-  { name: "round", label: "라운드", align: "left", field: "round" },
-  { name: "start_date", label: "일자", align: "left", field: "start_date" },
-  { name: "start_time", label: "시작", align: "left", field: "end_time" },
-  { name: "end_time", label: "종료", align: "left", field: "end_time" },
-  {
-    name: "is_bid_available",
-    label: "입찰 가능 여부",
-    align: "left",
-    field: (row) =>
-      row.is_bid_available === "Y" ? "입찰 가능" : "입찰 불가능",
-  },
-  {
-    name: "approved",
-    label: "승인 상태",
-    align: "left",
-    field: "approved",
-    field: (row) => (row.approved === "Y" ? "승인" : "미승인"),
-  },
-
-  { name: "actions", label: "첨부 및 승인", align: "center" },
+  // 경기장 이름, 경기명 등의 추가 정보
 ];
 
+// 승인/취소/경기 추가에 따른 사용자 안내 메시지
 const guideMessage = computed(() => {
   if (canDisapprove.value)
     return "승인 취소할 내용이 맞으면 확인버튼을 클릭하세요.";
@@ -201,12 +194,14 @@ const guideMessage = computed(() => {
   return "";
 });
 
+// 경기 정보 조회
 const fetchMatches = async () => {
   try {
     const response = await axios.get(APIs.GET_ALLMATCHES, {
       params: {
         telno: sessionResults.telno,
         userType: sessionResults.userType,
+        venueCd: localSessionData.venueCd,
       },
     });
     if (response.status === 200) {
@@ -217,6 +212,7 @@ const fetchMatches = async () => {
   }
 };
 
+// 승인 처리
 const handleApprove = (match) => {
   if (match.approved === "Y") {
     alert("이미 승인된 건입니다.");
@@ -226,6 +222,7 @@ const handleApprove = (match) => {
   setSelectedMatchData(match);
 };
 
+// 승인 취소 처리
 const handleResetApprove = (match) => {
   if (match.approved !== "Y") {
     alert("아직 승인이 안된 건입니다.");
@@ -235,36 +232,21 @@ const handleResetApprove = (match) => {
   setSelectedMatchData(match);
 };
 
+// 선택한 경기 데이터 설정
 const setSelectedMatchData = (match) => {
-  const formattedStartDate = formatTimeToLocal(match.start_datetime);
-  const formattedEndDate = formatTimeToLocal(match.end_datetime);
   matchData.value = {
     matchNumber: match.match_no,
-    venueCd: match.venue_cd,
     venueName: match.venue_name,
-    matchName: match.match_name,
-    round: match.round,
-    startDate: match.start_date
-      ? new Date(match.start_date).toISOString().slice(0, 10)
-      : "",
-    // startTime과 endTime을 HH:MM 형식으로 변환
-    startTime: match.start_time ? match.start_time.slice(0, 5) : "",
-    endTime: match.end_time ? match.end_time.slice(0, 5) : "",
-    isBidAvailable: match.is_bid_available,
-    fileName: match.filename_attached,
   };
 };
 
+// 제출 처리
 const handleSubmit = async () => {
   try {
-    let actionType = canDisapprove.value ? "N" : "Y";
-    const requestData = {
+    const response = await axios.post(APIs.APPROVE_MATCH, {
       ...matchData.value,
-      telno: sessionResults.telno,
-      userType: sessionResults.userType,
-      actionType,
-    };
-    const response = await axios.post(APIs.APPROVE_MATCH, requestData);
+      actionType: canDisapprove.value ? "N" : "Y",
+    });
     if (response.status === 200) {
       message.value = "성공적으로 작업이 수행되었습니다.";
       fetchMatches();
@@ -275,10 +257,14 @@ const handleSubmit = async () => {
   }
 };
 
-const handleSubmitCancel = () => {
-  resetState();
+// 상태 초기화
+const resetState = () => {
+  canDisapprove.value = false;
+  canApprove.value = false;
+  canViewFile.value = false;
 };
 
+// 파일 다운로드 처리
 const downloadFile = async (fileName) => {
   if (!fileName) {
     alert("첨부화일이 없습니다.");
@@ -301,13 +287,8 @@ const downloadFile = async (fileName) => {
     console.error(`파일 다운로드 오류: ${error.message}`);
   }
 };
-const handleBackToLogin = () => {
-  handleLink(router, localSessionData.userClass, "login");
-};
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-};
 
+// 오류 처리
 const handleError = (error) => {
   message.value = error.response
     ? error.response.data
@@ -316,22 +297,14 @@ const handleError = (error) => {
     : messageCommon.ERR_ETC;
 };
 
-const resetState = () => {
-  canDisapprove.value = false;
-  canApprove.value = false;
-  canViewFile.value = false;
-};
-
+// 초기 데이터 로드
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["tableName", "userClass", "venueCd"]);
-  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+  localSessionData = fetchLocalSession(["userClass", "venueCd"]);
+  sessionResults = await fetchSessionUser(localSessionData.userClass);
 
   if (!sessionResults.success) {
     resetLoginStatus();
-    handleBackToLogin();
   }
   await fetchMatches();
 });
 </script>
-
-<style scoped></style>

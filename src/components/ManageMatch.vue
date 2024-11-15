@@ -1,8 +1,14 @@
 <template>
   <q-page class="common-container">
-    <q-banner v-if="!matchArray || matchArray.length === 0" type="warning">
-      현재 정보가 없습니다.
-    </q-banner>
+    <q-card v-if="!matchArray || matchArray.length === 0">
+      <br />
+      <br />
+      <br />
+      <q-banner>현재 대회 정보가 없습니다.</q-banner>
+      <br />
+      <br />
+      <br />
+    </q-card>
 
     <div v-else>
       <h5 class="text-center">경기 정보</h5>
@@ -11,8 +17,8 @@
         :columns="columns"
         row-key="match_no"
         flat
-        :rows-per-page-options="[5, 10, 15]"
         dense
+        :rows-per-page="20"
       >
         <template v-slot:body-cell-actions="props">
           <q-td>
@@ -24,20 +30,29 @@
               @click="downloadFile(props.row.filename_attached)"
               flat
             />
-            <q-btn
-              v-if="props.row.approved !== 'Y'"
-              @click="handleUpdate(props.row)"
-              flat
-              label="수정"
-              class="q-mr-sm"
-            />
-            <q-btn
-              v-if="props.row.approved !== 'Y'"
-              @click="handleDelete(props.row)"
-              flat
-              label="삭제"
-              class="q-mr-sm"
-            />
+            <div v-if="props.row.approved !== APPROVED_MATCH">
+              <q-btn
+                @click="handleUpdate(props.row)"
+                push
+                color="white"
+                text-color="blue-grey-14"
+                label="수정"
+                :disable="
+                  updateInputMode || deleteConfirmMode || insertInputMode
+                "
+              />
+
+              <q-btn
+                @click="handleDelete(props.row)"
+                push
+                color="white"
+                text-color="deep-orange-14"
+                label="삭제"
+                :disable="
+                  updateInputMode || deleteConfirmMode || insertInputMode
+                "
+              />
+            </div>
           </q-td>
         </template>
       </q-table>
@@ -48,7 +63,7 @@
         v-if="!(updateInputMode || deleteConfirmMode || insertInputMode)"
         @click="handleInsert"
         label="경기 추가"
-        class="col-12 col-md-4"
+        class="q-mt-md"
         color="primary"
       />
     </div>
@@ -153,7 +168,7 @@
           />
         </div>
         <div class="row q-col-gutter-md">
-          <!-- q-input에서 input으로 수정 -->
+          <!-- q-input에서 input으로 수정함  -->
           <input
             type="file"
             @change="handleFileChange"
@@ -165,18 +180,22 @@
       </q-form>
       <div class="row q-col-gutter-md">
         <q-btn
+          push
+          color="whilte"
+          text-color="blue-grey-14"
+          class="q-mt-md col-xs-12 col-sm-6"
           @click="handleSubmit"
           type="submit"
           label="확인"
-          color="primary"
-          class="col-12 col-md-4 q-mt-md"
           :disable="!insertInputMode && !updateInputMode && !deleteConfirmMode"
         />
         <q-btn
+          push
+          color="white"
+          text-color="deep-orange-14"
+          class="q-mt-md col-xs-12 col-sm-6"
           @click="handleSubmitCancel"
           label="취소"
-          color="negative"
-          class="col-12 col-md-4 q-mt-md"
         />
       </div>
     </div>
@@ -186,16 +205,14 @@
 </template>
 
 <script setup>
-// Imports
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import { fetchSessionUser } from "../utils/fetchSessionUser";
-import { handleLink } from "../utils/handleLink";
+import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { navigate } from "../utils/navigate";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-import { fetchLocalSession } from "src/utils/fetchLocalSession";
 
 // Router 및 session 관련 변수
 const router = useRouter();
@@ -228,7 +245,9 @@ const deleteConfirmMode = ref(false);
 const message = ref("");
 const fileMessage = ref("");
 
-// 컴퓨티드 프로퍼티
+// 컴퓨티드 프로퍼티, 컬럼 등
+const APPROVED_MATCH = "Y";
+
 const computedMatchArray = computed(() => {
   return matchArray.value.map((match) => ({
     ...match,
@@ -259,14 +278,14 @@ const guideMessage = computed(() => {
 
 // 테이블 컬럼 정의
 const columns = [
-  { name: "match_no", label: "번호", field: "match_no" },
+  { name: "match_no", label: "경기번호", field: "match_no" },
   { name: "venue_name", label: "경기장", field: "venue_name" },
   { name: "match_name", label: "경기명", field: "match_name" },
   { name: "round", label: "라운드", field: "round" },
   { name: "start_date", label: "경기 일자", field: "start_date" },
   { name: "start_time", label: "시작 시간", field: "start_time" },
   { name: "end_time", label: "종료 시간", field: "end_time" },
-  { name: "bidLable", label: "입찰 여부", field: "bidLable" },
+  { name: "bidLable", label: "입찰 허용 여부", field: "bidLable" },
   { name: "bid_open_time", label: "입찰 개시", field: "bid_open_time" },
   { name: "bid_close_time", label: "입찰 종료", field: "bid_close_time" },
   { name: "approveStatus", label: "상태", field: "approveStatus" }, // 승인 상태 필드
@@ -287,6 +306,7 @@ const handleFileChange = (event) => {
   if (file) {
     // 파일이 존재할 경우 match_no와 파일명을 결합
     matchData.value.file = file;
+    alert("matchno " + matchData.value.matchNumber);
     matchData.value.fileName = `${matchData.value.matchNumber}_${file.name}`;
   } else {
     // 파일이 없을 경우 오류 메시지 출력
@@ -363,8 +383,6 @@ const handleSubmit = async () => {
     ? "delete"
     : null;
 
-  console.log("현재 모드:", currentMode);
-
   // 유효한 모드가 설정되었는지 확인
   if (!currentMode) {
     console.warn("유효한 작업 모드가 설정되지 않았습니다.");
@@ -373,12 +391,9 @@ const handleSubmit = async () => {
 
   const apiUrl = apiMapping[currentMode];
 
-  console.log("requestData:", requestData);
   try {
     // API 요청 시도
     const response = await axios.post(apiUrl, requestData);
-    console.log("API 응답 상태:", response.status);
-    console.log("API 응답 데이터:", response.data);
 
     // 응답 성공 확인
     if (response.status === 200) {
@@ -386,17 +401,14 @@ const handleSubmit = async () => {
 
       // 파일 업로드 확인
       if (updateInputMode.value || insertInputMode.value) {
-        console.log("파일 업로드 시도 중...");
         handleFileUpload();
       }
 
       fetchMatches();
       resetState();
     } else {
-      console.error("API 응답 오류:", response.status);
     }
   } catch (error) {
-    console.error("서버 요청 오류:", error);
     handleError(error);
   }
 };
@@ -434,7 +446,7 @@ const handleFileUpload = async () => {
 
 const downloadFile = async (fileName) => {
   if (!fileName) {
-    alert("첨부화일이 없습니다.");
+    message.value("첨부화일이 없습니다.");
     return;
   }
   try {
@@ -451,7 +463,7 @@ const downloadFile = async (fileName) => {
     link.remove();
     window.URL.revokeObjectURL(url);
   } catch (error) {
-    console.error(`파일 다운로드 오류: ${error.message}`);
+    handleError(error);
   }
 };
 

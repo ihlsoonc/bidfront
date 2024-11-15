@@ -2,9 +2,15 @@
   <q-page class="common-container">
     <q-card class="q-pa-md q-mb-lg" flat bordered>
       <q-card-section>
-        <div v-if="!venueArray || venueArray.length === 0" class="q-mb-md">
-          <q-banner type="warning">현재 정보가 없습니다.</q-banner>
-        </div>
+        <q-card v-if="!venueArray || venueArray.length === 0">
+          <br />
+          <br />
+          <br />
+          <q-banner>현재 경기장 정보가 없습니다.</q-banner>
+          <br />
+          <br />
+          <br />
+        </q-card>
 
         <div v-else>
           <h5>경기장 정보</h5>
@@ -19,17 +25,19 @@
               <q-td align="center">
                 <q-btn
                   @click="handleUpdate(props.row)"
-                  flat
+                  push
+                  color="white"
+                  text-color="blue-grey-14"
                   label="수정"
-                  class="q-mr-sm"
                   :disable="
                     updateInputMode || deleteConfirmMode || insertInputMode
                   "
                 />
                 <q-btn
                   @click="handleDelete(props.row)"
-                  flat
-                  color="negative"
+                  push
+                  color="white"
+                  text-color="deep-orange-14"
                   label="삭제"
                   :disable="
                     updateInputMode || deleteConfirmMode || insertInputMode
@@ -84,14 +92,23 @@
           :disable="deleteConfirmMode"
           class="q-mb-md"
         />
-        <q-btn type="submit" label="확인" color="primary" class="q-mt-md" />
-        <q-btn
-          @click="handleSubmitCancel"
-          label="취소"
-          color="negative"
-          class="q-mt-md"
-        />
       </q-form>
+      <q-btn
+        push
+        color="white"
+        text-color="blue-grey-14"
+        label="확인"
+        class="q-mt-md col-xs-12 col-sm-6"
+        @click="handleSubmit"
+      />
+      <q-btn
+        push
+        color="white"
+        text-color="deep-orange-14"
+        label="취소"
+        class="q-mt-md col-xs-12 col-sm-6"
+        @click="handleSubmitCancel"
+      />
     </div>
 
     <q-banner v-if="message" type="info" class="q-mt-md">{{
@@ -104,14 +121,14 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-import { fetchLocalSession } from "src/utils/fetchLocalSession";
 
 let sessionResults = {};
 let localSessionData = {};
 const router = useRouter();
+
 const venueArray = ref([]);
 const venueData = ref({
   venueCd: "",
@@ -119,6 +136,11 @@ const venueData = ref({
   venuePlaceInfo: "",
   venueGeneralInfo: "",
 });
+const insertInputMode = ref(false);
+const updateInputMode = ref(false);
+const deleteConfirmMode = ref(false);
+const message = ref("");
+
 const columns = [
   { name: "venue_cd", label: "경기장 코드", field: "venue_cd" },
   { name: "venue_name", label: "경기장 명", field: "venue_name" },
@@ -134,11 +156,6 @@ const columns = [
   },
   { name: "actions", label: "변경", align: "center" },
 ];
-
-const insertInputMode = ref(false);
-const updateInputMode = ref(false);
-const deleteConfirmMode = ref(false);
-const message = ref("");
 
 const guideMessage = computed(() => {
   if (insertInputMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
@@ -259,14 +276,14 @@ const resetMessage = () => {
   message.value = "";
 };
 const handleBackToLogin = () => {
-  handleLink(router, localSessionData.userClass, "login");
+  navigate(router, localSessionData.userClass, "login");
 };
 const resetLoginStatus = () => {
   emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
 };
 onMounted(async () => {
   localSessionData = fetchLocalSession(["userClass"]);
-  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+  sessionResults = await fetchSessionUser(localSessionData.userClass);
   if (!sessionResults.success) {
     resetLoginStatus();
     handleBackToLogin();
@@ -275,17 +292,4 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
-.q-page {
-  max-width: 800px;
-  margin: 0 auto;
-}
-.message-box {
-  color: #f44336;
-  font-weight: bold;
-}
-.buttons-containers {
-  display: flex;
-  justify-content: space-between;
-}
-</style>
+<style scoped></style>

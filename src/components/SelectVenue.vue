@@ -1,9 +1,15 @@
 <template>
   <div class="common-container">
-    <div v-if="!venueArray || venueArray.length == 0">
-      현재 정보가 없습니다.
-    </div>
-    <!-- 서버에서 데이터를 받아온 후 리스트로 보여주기 -->
+    <q-card v-if="!venueArray || venueArray.length === 0">
+      <br />
+      <br />
+      <br />
+      <q-banner>현재 경기장 정보가 없습니다.</q-banner>
+      <br />
+      <br />
+      <br />
+    </q-card>
+
     <div
       v-if="venueArray && venueArray.length > 0"
       class="columnflex-container"
@@ -32,97 +38,92 @@
     </div>
   </div>
 </template>
-<script>
+
+<script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { handleLink } from "../utils/handleLink";
-import { fetchLocalSession } from "../utils/fetchLocalSession";
-import { setLocalSession } from "../utils/setLocalSession";
-import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { navigate } from "../utils/navigate";
+import {
+  setLocalSession,
+  fetchLocalSession,
+  fetchSessionUser,
+} from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-export default {
-  setup(props, { emit }) {
-    let userClass = "";
-    let localSessionData = {};
-    const router = useRouter();
-    const venueArray = ref([]);
-    const selectedVenueCd = ref("");
-    const selectedVenueIndex = ref(null);
-    const message = ref("");
+// 상태 및 라우터 정의
+const router = useRouter();
+const venueArray = ref([]);
+const selectedVenueCd = ref("");
+const selectedVenueIndex = ref(null);
+const message = ref("");
 
-    // 서버에서 데이터 가져오기
-    const fetchVenues = async () => {
-      try {
-        const response = await axios.get(APIs.GET_ALL_VENUES); // 서버에서 경기장 데이터를 읽어옴
-        venueArray.value = response.data;
-      } catch (error) {
-        handleError(error);
-      }
-    };
-    const getImageUrl = (fileName) => {
-      return new URL(`/images/venues/${fileName}`, import.meta.url).href;
-    };
-
-    // 경기장 선택 처리
-    const handleSelectVenue = (index) => {
-      const venue = venueArray.value[index];
-      selectedVenueCd.value = venue.venue_cd;
-      setLocalSession(localSessionData.userClass, {
-        venueCd: selectedVenueCd.value,
-      });
-      handleLink(router, localSessionData.userClass, "selectMatch");
-    };
-
-    // 선택한 경기장 데이터 계산
-    const selectedVenue = computed(() => {
-      return selectedVenueIndex.value !== null
-        ? venueArray.value[selectedVenueIndex.value]
-        : null;
-    });
-
-    const handleError = (error) => {
-      message.value = error.response
-        ? error.response.data
-        : error.request
-        ? messageCommon.ERR_NETWORK
-        : messageCommon.ERR_ETC;
-    };
-
-    const handleBackToLogin = () => {
-      handleLink(router, localSessionData.userClass, "login");
-    };
-    const resetLoginStatus = () => {
-      emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-    };
-
-    onMounted(async () => {
-      localSessionData = fetchLocalSession(["tableName", "userClass"]);
-      const sessionResults = await fetchSessionUser(localSessionData.userClass);
-      if (!sessionResults.success) {
-        resetLoginStatus();
-        handleBackToLogin();
-      }
-      fetchVenues();
-    });
-
-    return {
-      venueArray,
-      getImageUrl,
-      selectedVenueIndex,
-      handleSelectVenue,
-      selectedVenue,
-      message,
-    };
-  },
+// 서버에서 경기장 데이터를 가져오는 함수
+const fetchVenues = async () => {
+  try {
+    const response = await axios.get(APIs.GET_ALL_VENUES);
+    venueArray.value = response.data;
+  } catch (error) {
+    handleError(error);
+  }
 };
+
+// 이미지 URL 생성 함수
+const getImageUrl = (fileName) => {
+  return new URL(`/images/venues/${fileName}`, import.meta.url).href;
+};
+
+// 경기장 선택 처리
+const handleSelectVenue = (index) => {
+  const venue = venueArray.value[index];
+  selectedVenueCd.value = venue.venue_cd;
+  setLocalSession(localSessionData.userClass, {
+    venueCd: selectedVenueCd.value,
+  });
+  navigate(router, localSessionData.userClass, "selectMatch");
+};
+
+// 선택된 경기장 데이터
+const selectedVenue = computed(() => {
+  return selectedVenueIndex.value !== null
+    ? venueArray.value[selectedVenueIndex.value]
+    : null;
+});
+
+// 오류 처리 함수
+const handleError = (error) => {
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
+};
+
+// 로그인 상태 초기화 및 로그인 화면으로 이동
+const handleBackToLogin = () => {
+  navigate(router, localSessionData.userClass, "login");
+};
+const resetLoginStatus = () => {
+  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
+};
+
+// 컴포넌트가 마운트될 때 실행
+let localSessionData = {};
+onMounted(async () => {
+  localSessionData = fetchLocalSession(["tableName", "userClass"]);
+  const sessionResults = await fetchSessionUser(localSessionData.userClass);
+  if (!sessionResults.success) {
+    resetLoginStatus();
+    handleBackToLogin();
+  }
+  fetchVenues();
+});
 </script>
 
 <style scoped>
 .venue-image {
-  max-width: 100%px;
+  max-width: 100%;
   height: auto;
   margin-top: 2px;
 }
@@ -130,6 +131,7 @@ export default {
 h6 {
   align-self: center;
 }
+
 button {
   padding: 8px;
   font-size: 14px;
@@ -141,6 +143,6 @@ button {
 
 button:hover {
   background-color: white;
-  cursor: point;
+  cursor: pointer;
 }
 </style>

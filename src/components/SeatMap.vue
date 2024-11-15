@@ -1,12 +1,13 @@
 <template>
   <div>
     <p>
-      좌석을 선택한 후 입찰 금액을 입력하세요. 현재 입찰된 좌석은 윤곽선으로
-      표시됩니다.
+      좌석을 선택한 후 입찰 금액을 입력하세요. 입찰내용이 있는 좌석은 윤곽선으로
+      표시됨.
     </p>
+
     <div class="seat-grid">
       <q-btn
-        v-for="seatNumber in 23"
+        v-for="seatNumber in 40"
         :key="seatNumber"
         :label="`${seatNumber}번\n${getSeatInfo(seatNumber).highestBid}원\n${
           getSeatInfo(seatNumber).bidCount
@@ -26,39 +27,55 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    selectedSeats: Array,
-    seatBidArray: Array,
-    disabled: Boolean,
-    onSeatClick: {
-      type: Function,
-      required: true,
-    },
+<script setup>
+import { defineProps, defineEmits } from "vue";
+
+const props = defineProps({
+  selectedSeats: Array,
+  bidsArray: Array,
+  disabled: Boolean,
+  onSeatClick: {
+    type: Function,
+    required: true,
   },
-  methods: {
-    handleSeatClick(seatNumber) {
-      this.$emit("seat-click", seatNumber);
-    },
-    isSelected(number) {
-      return this.selectedSeats.some((seat) => seat.uniqueSeatId === number);
-    },
-    hasBidders(number) {
-      const seat = this.seatBidArray.find((s) => s.seat_no == number);
-      return seat ? seat.total_bidders > 0 : false;
-    },
-    getSeatInfo(number) {
-      const seat = this.seatBidArray.find((s) => s.seat_no == number);
-      if (seat) {
-        return {
-          highestBid: seat.current_bid_amount || 0,
-          bidCount: seat.total_bidders || 0,
-        };
-      }
-      return { highestBid: 0, bidCount: 0 };
-    },
-  },
+});
+
+const emit = defineEmits(["seat-click"]);
+
+// 좌석 클릭 핸들러
+const handleSeatClick = (seatNumber) => {
+  emit("seat-click", seatNumber);
+};
+
+// 좌석이 선택되었는지 확인하는 함수
+const isSelected = (number) => {
+  return props.selectedSeats.some((seat) => seat.uniqueSeatId === number);
+};
+
+// 좌석에 입찰자가 있는지 확인하는 함수
+const hasBidders = (number) => {
+  const seat = props.bidsArray.find((s) => s.seat_no == number);
+  return seat ? seat.total_bidders > 0 : false;
+};
+
+const getSeatInfo = (number) => {
+  // bidsArray 유효한지 확인
+  if (!props.bidsArray || !Array.isArray(props.bidsArray)) {
+    console.error("bidsArray is invalid:", props.bidsArray);
+    return { highestBid: 0, bidCount: 0 };
+  }
+
+  const seat = props.bidsArray.find((s) => s.seat_no == number);
+
+  // seat가 없는 경우의 처리
+  if (!seat) {
+    return { highestBid: 0, bidCount: 0 };
+  }
+
+  return {
+    highestBid: seat.current_bid_amount || 0,
+    bidCount: seat.total_bidders || 0,
+  };
 };
 </script>
 
@@ -96,5 +113,19 @@ export default {
 .seat-box.bidded {
   border: 5px solid #a7a3a3; /* 짙은 회색(#a7a3a3) 두께 5px */
   box-shadow: 0 0 8px 3px #a7a3a3; /* 번짐 효과 추가 */
+}
+
+/* props 값을 표시할 영역 스타일 */
+.props-display {
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+
+.props-display p {
+  margin: 5px 0;
+  font-size: 14px;
 }
 </style>

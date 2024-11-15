@@ -91,22 +91,22 @@
           outlined
           class="q-mb-md"
         />
-
-        <q-btn
-          type="submit"
-          label="수정 내용 제출"
-          color="primary"
-          class="full-width q-mb-md"
-        />
-        <q-btn
-          type="reset"
-          label="취소"
-          color="warning"
-          outline
-          class="full-width"
-          @click="handleReset"
-        />
       </q-form>
+      <q-btn
+        push
+        color="white"
+        text-color="blue-grey-14"
+        label="수정 내용 제출"
+        class="q-mt-md col-xs-12 col-sm-6"
+      />
+      <q-btn
+        push
+        color="white"
+        text-color="deep-orange-14"
+        label="취소"
+        @click="handleReset"
+        class="q-mt-md col-xs-12 col-sm-6"
+      />
     </div>
   </q-page>
 </template>
@@ -114,8 +114,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
-import { fetchLocalSession } from "../utils/fetchLocalSession";
-import { fetchSessionUser } from "../utils/fetchSessionUser";
+import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { ADMIN_TYPES } from "../utils/ADMIN_TYPES";
@@ -251,7 +250,7 @@ const handleReset = () => {
 };
 
 const handleBackToLogin = () => {
-  handleLink(router, localSessionData.userClass, "login");
+  navigate(router, localSessionData.userClass, "login");
 };
 
 const resetLoginStatus = () => {

@@ -18,7 +18,7 @@
           dense
           label="Logout"
           v-if="isLoggedIn"
-          @click="handleLinkAction('adminlogout')"
+          @click="handleNavigate('adminlogout')"
         />
       </q-toolbar>
     </q-header>
@@ -26,16 +26,16 @@
     <!-- 사이드바 (Drawer) -->
     <q-drawer v-model="leftDrawerOpen" side="left" bordered>
       <q-list>
-        <q-item clickable v-ripple @click="handleLinkAction('adminhome')">
+        <q-item clickable v-ripple @click="handleNavigate('adminhome')">
           <q-item-section>Home</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('matches')">
+        <q-item clickable v-ripple @click="handleNavigate('matches')">
           <q-item-section>Matches</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('users')">
+        <q-item clickable v-ripple @click="handleNavigate('users')">
           <q-item-section>Users</q-item-section>
         </q-item>
-        <q-item clickable v-ripple @click="handleLinkAction('settings')">
+        <q-item clickable v-ripple @click="handleNavigate('settings')">
           <q-item-section>Settings</q-item-section>
         </q-item>
       </q-list>
@@ -65,7 +65,7 @@ export default {
     const hasSelectedMatch = ref(false);
     const leftDrawerOpen = ref(false);
 
-    const handleLinkAction = (action) => {
+    const handleNavigate = (action) => {
       router.push(url[action]);
     };
 
@@ -90,7 +90,7 @@ export default {
     });
 
     return {
-      handleLinkAction,
+      handleNavigate,
       isLoggedIn,
       hasSelectedMatch,
       handleUpdateStatus,

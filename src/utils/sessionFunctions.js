@@ -2,8 +2,6 @@ import axios from "axios";
 import { APIs } from "./APIs";
 
 export const fetchSessionUser = async (userClass) => {
-  // console.log("fetchSessionUser 호출됨:", { userClass });
-
   try {
     const response = await axios.get(APIs.GET_SESSION_USER, {
       withCredentials: true,

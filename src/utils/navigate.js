@@ -1,13 +1,12 @@
 import { url } from "./urls";
 
-export const handleLink = (router, userClass, action, query = null) => {
-  // 파라미터 값 출력
-  // console.log("handleLink 호출:", {
-  //   router,
-  //   userClass,
-  //   action,
-  //   query,
-  // });
+export const navigate = (router, userClass, action, query = null) => {
+  console.log("navigate 호출:", {
+    router,
+    userClass,
+    action,
+    query,
+  });
 
   const urlTogo = url[action]?.[userClass];
   urlTogo

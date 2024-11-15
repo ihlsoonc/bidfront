@@ -8,8 +8,8 @@
           <th>좌석 가격</th>
           <th>총 입찰자 수</th>
           <th>최고 입찰 금액</th>
-          <th v-if="isUser">입찰 금액</th>
-          <th v-if="isUser">비고</th>
+          <th>입찰 금액</th>
+          <th>비고</th>
         </tr>
       </thead>
       <tbody>
@@ -18,15 +18,15 @@
           <td>{{ seat.seat_price }}원</td>
           <td>{{ seat.total_bidders }}명</td>
           <td>{{ seat.current_bid_amount }}원</td>
-          <td v-if="isUser">
+          <td>
             <input
               type="number"
-              v-model.number="localBidAmounts[seat.uniqueSeatId]"
+              v-model.number="seat.bid_Amount"
               @input="onBidAmountChange($event, seat)"
               :disabled="isClosedBid"
             />
           </td>
-          <td v-if="isUser">{{ seat.submitResult }}</td>
+          <td>{{ seat.submitResult }}</td>
         </tr>
         <tr v-if="selectedSeats.length === 0">
           <td colspan="6" style="text-align: center">선택 정보가 없습니다.</td>
@@ -38,7 +38,8 @@
       <span>현재 입찰 금액: {{ bidTotal }}원</span>
     </div>
   </div>
-  <div v-if="isUser">
+
+  <div>
     <q-btn
       v-if="selectedSeats.length > 0 && !isClosedBid"
       @click="handleBidSubmit"
@@ -54,83 +55,74 @@
   </div>
 </template>
 
-<script>
-import { reactive, computed, watch, toRefs } from "vue";
+<script setup>
+import { reactive, computed, watch } from "vue";
 
-export default {
-  props: {
-    selectedSeats: {
-      type: Array,
-      required: true,
-    },
-    bidAmounts: {
-      type: Object,
-      required: true,
-    },
-    isUser: {
-      type: Boolean,
-      required: true,
-    },
-    isClosedBid: {
-      type: Boolean,
-      required: true,
-    },
+const props = defineProps({
+  selectedSeats: {
+    type: Array,
+    required: true,
   },
-
-  setup(props, { emit }) {
-    const state = reactive({
-      localBidAmounts: { ...props.bidAmounts },
-    });
-
-    watch(
-      () => props.bidAmounts,
-      (newVal) => {
-        state.localBidAmounts = { ...newVal };
-      },
-      { deep: true }
-    );
-
-    const onBidAmountChange = (event, seat) => {
-      const value = parseFloat(event.target.value) || 0;
-      emit("bidAmountChange", value, seat);
-    };
-
-    const minBidAmount = computed(() => {
-      return props.selectedSeats.reduce((sum, seat) => {
-        const chosenAmount =
-          seat.current_bid_amount > 0
-            ? seat.current_bid_amount
-            : seat.seat_price;
-        return sum + (chosenAmount || 0);
-      }, 0);
-    });
-
-    const bidTotal = computed(() => {
-      return Object.values(state.localBidAmounts).reduce(
-        (sum, amount) => sum + amount,
-        0
-      );
-    });
-
-    const handleBidSubmit = () => {
-      emit("submit-bid", bidTotal.value);
-    };
-
-    const cancelBidSubmit = () => {
-      state.localBidAmounts = {};
-
-      emit("cancel-bid");
-    };
-
-    return {
-      ...toRefs(state),
-      onBidAmountChange,
-      minBidAmount,
-      bidTotal,
-      handleBidSubmit,
-      cancelBidSubmit,
-    };
+  bidAmounts: {
+    type: Object,
+    required: true,
   },
+  isClosedBid: {
+    type: Boolean,
+    required: true,
+  },
+});
+
+const emit = defineEmits(["bidAmountChange", "submit-bid", "cancel-bid"]);
+
+// bidAmounts에 반응하는 localBidAmounts 생성
+const localBidAmounts = reactive({ ...props.bidAmounts });
+
+// bidAmounts 변화 감지
+watch(
+  () => props.bidAmounts,
+  (newVal) => {
+    Object.keys(newVal).forEach((key) => {
+      localBidAmounts[key] = newVal[key];
+    });
+  },
+  { deep: true }
+);
+
+const onBidAmountChange = (event, seat) => {
+  const value = parseFloat(event.target.value) || 0;
+  localBidAmounts[seat.uniqueSeatId] = value;
+  emit("bidAmountChange", value, seat);
+};
+
+// 최저 입찰 금액 합계 계산
+const minBidAmount = computed(() => {
+  return props.selectedSeats.reduce((sum, seat) => {
+    const chosenAmount =
+      seat.current_bid_amount > 0 ? seat.current_bid_amount : seat.seat_price;
+    return sum + (chosenAmount || 0);
+  }, 0);
+});
+
+// 현재 입찰 금액 합계 계산
+const bidTotal = computed(() => {
+  return Object.values(localBidAmounts).reduce(
+    (sum, amount) => sum + amount,
+    0
+  );
+});
+
+// 입찰 제출 처리 함수
+const handleBidSubmit = () => {
+  emit("submit-bid", bidTotal.value);
+};
+
+// 입찰 취소 처리 함수
+const cancelBidSubmit = () => {
+  Object.keys(localBidAmounts).forEach((key) => {
+    localBidAmounts[key] = 0;
+  });
+  emit("cancel-bid");
 };
 </script>
 

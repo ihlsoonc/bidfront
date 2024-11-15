@@ -25,13 +25,15 @@
                 {{ props.row.col_no }}번)
                 {{ props.row.paidStatus }}
               </q-td>
+              <q-td> {{ props.row.username }} </q-td>
               <q-td>
                 {{ props.row.bid_amount.toLocaleString() }}원 :
                 {{ formatTimeToLocal(props.row.bid_at) }}
               </q-td>
               <q-td>
-                {{ (props.row.highest_bid_amount || 0).toLocaleString() }}원
-              </q-td>
+                {{ props.row.total_bidders }}명&nbsp;&nbsp;&nbsp;
+                {{ props.row.total_bids }}건</q-td
+              >
               <q-td>
                 <q-btn
                   v-if="props.row.historyButtonEnabled"
@@ -51,7 +53,7 @@
                       isSelectedHistory(props.row) ? 'primary' : 'secondary'
                     "
                   >
-                    이력 {{ props.row.bidHistory.length }}건
+                    입찰이력 {{ props.row.bidHistory.length }}건
                   </q-badge>
                 </q-btn>
               </q-td>
@@ -65,6 +67,7 @@
                   :key="hIndex"
                 >
                   <q-item-section>
+                    {{ history.username }}&nbsp;&nbsp;
                     {{ history.bid_amount.toLocaleString() }}원 :
                     {{ formatTimeToLocal(history.bid_at) }}
                   </q-item-section>
@@ -73,32 +76,11 @@
             </q-tr>
           </template>
         </q-table>
-
         <!-- 낙찰금액과 입찰금액 합계 표시 -->
         <div>
-          낙찰금액 합계: {{ totalWinAmount.toLocaleString() }}원 &nbsp;&nbsp;
-          {{ totalWinCount }}건 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 입찰금액 합계:
+          총 {{ totalWinCount }}건 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 입찰금액 합계:
           {{ totalBidAmount.toLocaleString() }}원
         </div>
-      </q-card-section>
-
-      <!-- 결제 및 경기 선택 버튼 섹션 -->
-      <q-card-section>
-        <q-btn
-          push
-          color="white"
-          text-color="blue-grey-14"
-          @click="emitPaySubmit"
-          :disable="isApproved || totalWinAmount === 0"
-          label="낙찰 내용 결제"
-        />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <q-btn
-          push
-          color="white"
-          text-color="deep-orange-14"
-          @click="emitSelectVenue"
-          label="경기 다시 선택"
-        />
       </q-card-section>
     </q-card>
   </div>
@@ -117,7 +99,7 @@ const props = defineProps({
   isApproved: Boolean,
 });
 
-const emit = defineEmits(["toggleHistory", "paySubmit", "selectVenue"]);
+const emit = defineEmits(["toggleHistory"]);
 
 // 날짜 및 시간 형식을 로컬 시간으로 포맷하는 함수
 const formatTimeToLocal = (time) => {
@@ -132,16 +114,6 @@ const toggleHistory = (seat) => {
 
 // 선택된 이력인지 확인
 const isSelectedHistory = (row) => props.selectedHistoryButton === row.seat_no;
-
-// 결제 제출 이벤트 emit
-const emitPaySubmit = () => {
-  emit("paySubmit");
-};
-
-// 경기 선택 이벤트 emit
-const emitSelectVenue = () => {
-  emit("selectVenue");
-};
 </script>
 
 <style scoped></style>

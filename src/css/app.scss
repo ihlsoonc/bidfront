@@ -105,7 +105,10 @@ h6 {
 .bold-text {
   font-weight: bold;
 }
-
+.important-text {
+  font-weight: bold;
+  text-emphasis-color: deep-orange-14;
+}
 .xsmall {
   font-size: 10px;
 }

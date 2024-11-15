@@ -26,15 +26,14 @@
               filled
               @update:model-value="revalidateUser"
             />
-            <q-btn
-              @click="handleSubmit"
-              type="submit"
-              label="로그인"
-              color="primary"
-            />
           </q-form>
         </q-card-section>
-
+        <q-btn
+          @click="handleSubmit"
+          type="submit"
+          label="로그인"
+          color="primary"
+        />
         <q-card-section v-if="message">
           <q-banner type="warning">{{ message }}</q-banner>
         </q-card-section>
@@ -42,18 +41,21 @@
         <q-card-actions align="around">
           <q-btn
             label="비밀번호 찾기"
-            @click="navigate('password', 1)"
+            @click="handleNavigate('password', 1)"
             flat
             color="standard"
           />
-          <q-btn label="비밀번호 변경" @click="navigate('password', 2)" flat />
+          <q-btn
+            label="비밀번호 변경"
+            @click="handleNavigate('password', 2)"
+            flat
+          />
           <q-btn
             v-if="isNotAdmin"
             label="회원가입"
-            @click="navigate('register')"
+            @click="handleNavigate('register')"
             flat
           />
-          <q-btn label="알림톡" @click="sendAlimTalk" flat />
         </q-card-actions>
       </q-card>
     </div>
@@ -67,7 +69,7 @@ import { useRouter } from "vue-router";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
-import { handleLink } from "../utils/handleLink";
+import { navigate } from "../utils/navigate";
 
 const router = useRouter();
 const emit = defineEmits(["update-status"]);
@@ -79,27 +81,14 @@ let localSessionData = {};
 let sessionResults = {};
 
 // 버튼 액션 핸들러
-const navigate = (action, tab) =>
-  handleLink(router, localSessionData.userClass, action, { tab });
-
-// 알림톡 전송
-const sendAlimTalk = async () => {
-  try {
-    await axios.post(
-      APIs.SEND_KAKAO_ALIMTALK,
-      { query: userData.value.query, queryType: "telno" },
-      { withCredentials: true }
-    );
-  } catch (error) {
-    handleError(error);
-  }
-};
+const handleNavigate = (action, tab) =>
+  navigate(router, localSessionData.userClass, action, { tab });
 
 // 로그인 요청
 const handleSubmit = async () => {
-  message.value = "";
-
-  if (!validateInput()) return;
+  if (!validateInput()) {
+    return;
+  }
 
   try {
     const response = await axios.post(
@@ -113,13 +102,18 @@ const handleSubmit = async () => {
       { withCredentials: true }
     );
 
-    if (response.status === 200) {
+    const currentType = mapUserType(localSessionData.userClass);
+    if (currentType === response.data.userType) {
       emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
-      navigate("selectVenue");
+      handleNavigate("selectVenue");
     } else {
       handlePermissionError(response.data.userType);
     }
   } catch (error) {
+    console.error(
+      "----------------------------------로그인 중 오류 발생",
+      error
+    );
     handleError(error);
   }
 };
@@ -138,9 +132,13 @@ const validateInput = () => {
 };
 
 // 권한 오류 처리
-const handlePermissionError = (userType) => {
+const handlePermissionError = (dbUserType) => {
   const currentType = mapUserType(localSessionData.userClass);
-  message.value = `현재 시스템에 권한이 없습니다. db Type => ${userType} ${currentType}`;
+  message.value = "현재 시스템에 권한이 없습니다.";
+  console.log(
+    `현재 시스템에 권한이 없습니다. db Type => ${dbUserType}, 허용된 타입 => ${currentType}`
+  );
+
   resetLoginStatus();
 };
 
@@ -164,7 +162,7 @@ const initializeSession = async () => {
 
   sessionResults = await fetchSessionUser(localSessionData.userClass);
   if (sessionResults.success) {
-    message.value = `${sessionResults.userName}님은 로그인 상태입니다. (User Class: ${sessionResults.userClass})`;
+    message.value = `${sessionResults.userName}님은 로그인 상태입니다.`;
     emit("update-status", { isLoggedIn: true, hasSelectedMatch: false });
   } else {
     resetLoginStatus();
@@ -186,7 +184,9 @@ const revalidateUser = () => {
   // 세션 데이터와 비교가 필요하면 여기에서 처리
 };
 
-onMounted(initializeSession);
+onMounted(async () => {
+  initializeSession();
+});
 </script>
 
 <style scoped>

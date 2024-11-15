@@ -18,7 +18,7 @@
         round
         dense
         label="경기장 선택"
-        @click="handleLinkAction('selectVenue')"
+        @click="handleClickAction('selectVenue')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -27,7 +27,7 @@
         round
         dense
         label="대회관리"
-        @click="handleLinkAction('manageMatch')"
+        @click="handleClickAction('manageMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -36,17 +36,25 @@
         round
         dense
         label="사용자정보수정"
-        @click="handleLinkAction('updateUser')"
+        @click="handleClickAction('updateUser')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
+      <q-btn
+        flat
+        round
+        dense
+        icon="home"
+        @click="handleClickAction('login')"
+        v-if="$q.screen.gt.md"
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="로그아웃"
-        @click="handleLinkAction('logout')"
+        icon="logout"
+        @click="handleClickAction('logout')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />
@@ -59,7 +67,7 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('selectVenue')"
+        @click="handleClickAction('selectVenue')"
         :class="{ disabled: !isLoggedIn }"
       >
         <q-item-section>경기장선택</q-item-section>
@@ -67,7 +75,7 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('manageMatch')"
+        @click="handleClickAction('manageMatch')"
         :class="{ disabled: !isLoggedIn }"
       >
         <q-item-section>대회관리</q-item-section>
@@ -75,86 +83,59 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('updateUser')"
+        @click="handleClickAction('updateUser')"
         :class="{ disabled: !isLoggedIn }"
       >
         <q-item-section>사용자정보수정</q-item-section>
       </q-item>
-      <q-item clickable v-ripple @click="handleLinkAction('login')">
+      <q-item clickable v-ripple @click="handleClickAction('login')">
         <q-item-section>로그인</q-item-section>
       </q-item>
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('logout')"
+        @click="handleClickAction('logout')"
         :class="{ disabled: !isLoggedIn }"
       >
-        <q-item-section>로그아웃</q-item-section>
+        <q-icon name="logout" />로그아웃
       </q-item>
     </q-list>
   </q-drawer>
 </template>
 
-<script>
-import { ref, watch, onMounted } from "vue";
+<script setup>
+import { ref, toRefs, onMounted } from "vue";
 
-export default {
-  name: "NavBarAdminM",
-  emits: ["link-action"],
-  props: {
-    isLoggedIn: {
-      type: Boolean,
-      default: false,
-    },
-    hasSelectedMatch: {
-      type: Boolean,
-      default: false,
-    },
+const props = defineProps({
+  isLoggedIn: {
+    type: Boolean,
+    default: false,
   },
-  setup(props, { emit }) {
-    const isLoggedIn = ref(props.isLoggedIn);
-    const leftDrawerOpen = ref(false);
-
-    // 링크 클릭 시 이벤트를 emit합니다.
-    const handleLinkAction = (action) => {
-      emit("link-action", action);
-    };
-
-    const updateStatus = () => {
-      isLoggedIn.value = props.isLoggedIn;
-    };
-
-    const toggleDrawer = () => {
-      leftDrawerOpen.value = !leftDrawerOpen.value;
-    };
-
-    // 로그인 상태를 감지합니다.
-    watch(
-      () => props.isLoggedIn,
-      () => {
-        updateStatus();
-      }
-    );
-
-    onMounted(() => {
-      updateStatus();
-    });
-
-    return {
-      handleLinkAction,
-      toggleDrawer,
-      leftDrawerOpen,
-    };
+  hasSelectedMatch: {
+    type: Boolean,
+    default: false,
   },
+});
+
+const emit = defineEmits(["link-action"]);
+const { isLoggedIn } = toRefs(props);
+const { hasSelectedMatch } = toRefs(props);
+const leftDrawerOpen = ref(false);
+
+const handleClickAction = (action) => {
+  leftDrawerOpen.value = false;
+  emit("link-action", action);
 };
+
+const toggleDrawer = () => {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+};
+
+onMounted(() => {});
 </script>
 
 <style scoped>
 .q-toolbar-title {
   flex-grow: 1;
-}
-
-.q-btn {
-  margin-right: 10px;
 }
 </style>

@@ -16,7 +16,7 @@
           @input="resetTelnoStatus"
         />
       </label>
-      <button @click="handleTelnoCheck" type="button" :disabled="isValidTelno">
+      <button @click="validateTelno" type="button" :disabled="isValidTelno">
         인증번호 발송
       </button>
 
@@ -32,7 +32,7 @@
           placeholder="인증번호 6자리를 입력하세요."
           @input="checkAuthNumber"
         />
-        <button @click="handleTelnoCheck" type="button">재발송</button>
+        <button @click="validateTelno" type="button">재발송</button>
       </div>
 
       <!-- 사용자 정보 입력 -->
@@ -67,8 +67,10 @@
             class="input"
             placeholder="이메일을 입력하세요."
             autocomplete="email"
+            @input="resetEmailStatus"
           />
         </label>
+        <q-btn @click="validateEmail" type="button"> 이메일 유효 확인 </q-btn>
 
         <label>
           우편번호:
@@ -106,169 +108,204 @@
 
         <!-- 제출 버튼 -->
         <br /><br />
-        <button @click="handleSubmit" type="button">입력 내용 제출</button>
+        <q-btn @click="handleSubmit" color="primary">입력 내용 제출</q-btn>
       </div>
     </div>
     <!-- 메시지 박스 -->
-    <div v-if="message" class="message-box">{{ message }}</div>
+    <q-banner v-if="message" class="message-box">{{ message }}</q-banner>
   </div>
 </template>
 
-<script>
+<script setup>
 import axios from "axios";
 import { ref } from "vue";
-import { fetchLocalSession } from "../utils/fetchLocalSession";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-export default {
-  setup() {
-    const userData = ref({
-      userId: "",
-      password: "",
-      userName: "",
-      email: "",
-      telno: "",
-      postCode: "",
-      addr1: "",
-      addr2: "",
-      userType: "",
+// 사용자 데이터 초기화
+const userData = ref({
+  userId: "",
+  password: "",
+  userName: "",
+  email: "",
+  telno: "",
+  postCode: "",
+  addr1: "",
+  addr2: "",
+  userType: "",
+});
+
+const message = ref("");
+const isValidTelno = ref(false);
+const isValidEmail = ref(false);
+const authCodeInputMode = ref(false);
+const isExistingTelno = ref(false);
+const isExistingEmail = ref(false);
+const localSessionData = fetchLocalSession(["tableName", "userClass"]);
+
+// 전화번호 인증 관련 함수
+const validateTelno = async () => {
+  if (!validateTelnoPattern()) return;
+  await checkDuplicateTelno();
+
+  if (isExistingTelno.value) {
+    alert("등록된 전화번호가 있습니다. 다시 입력해주세요.");
+    message.value = "";
+    isValidTelno.value = false;
+    return;
+  }
+
+  userData.value.authNumber = "";
+  authCodeInputMode.value = true;
+
+  try {
+    const response = await axios.post(APIs.SEND_ONE_SMS, {
+      ...userData.value,
+      table: localSessionData.tableName,
     });
+    if (response.status === 200) {
+      message.value = `인증번호가 발송되었습니다. ${response.data.verificationCode}`;
+    }
+  } catch (error) {
+    handleError(error);
+  }
+};
 
-    const message = ref("");
-    const isValidTelno = ref(false);
-    const authCodeInputMode = ref(false);
-    const isExistingTelno = ref(false);
-    const localSessionData = fetchLocalSession(["tableName", "userClass"]);
+// 전화번호 인증 관련 함수
+const validateEmail = async () => {
+  if (!validateEmailPattern()) return;
+  await checkDuplicateEmail();
 
-    // 전화번호 인증 관련 함수
-    const handleTelnoCheck = async () => {
-      if (!validateTelno()) return;
-      await checkDuplicateId();
+  if (isExistingEmail.value) {
+    alert("등록된 이메일이 있습니다. 다시 입력해주세요.");
+    message.value = "";
+    isValidEmail.value = false;
+    return;
+  }
 
-      if (isExistingTelno.value) {
-        alert("등록된 전화번호가 있습니다. 다시 입력해주세요.");
-        message.value = "";
-        isValidTelno.value = false;
-        return;
-      }
+  isValidEmail.value = true;
+};
 
+const resetTelnoStatus = () => {
+  message.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
+  isValidTelno.value = false;
+};
+
+const resetEmailStatus = () => {
+  message.value = "이메일이 변경되었습니다. 이메일확인을 눌러주세요.";
+  isValidEmail.value = false;
+};
+
+const checkAuthNumber = () => {
+  if (userData.value.authNumber.length === 6) compareAuthNumber();
+};
+
+const compareAuthNumber = async () => {
+  try {
+    const response = await axios.post(APIs.VERIFY_CODE, {
+      ...userData.value,
+      table: localSessionData.tableName,
+    });
+    if (response.status === 200) {
+      message.value = "인증번호가 확인되었습니다.";
+      isValidTelno.value = true;
+      authCodeInputMode.value = false;
       userData.value.authNumber = "";
-      authCodeInputMode.value = true;
+    }
+  } catch (error) {
+    handleError(error);
+  }
+};
 
-      try {
-        const response = await axios.post(APIs.SEND_ONE_SMS, {
-          ...userData.value,
-          table: localSessionData.tableName,
-        });
-        if (response.status === 200) {
-          message.value = `인증번호가 발송되었습니다. ${response.data.verificationCode}`;
-        }
-      } catch (error) {
-        handleError(error);
-      }
-    };
+const checkDuplicateTelno = async () => {
+  try {
+    const response = await axios.post(APIs.GET_USER_INFO, {
+      query: userData.value.telno,
+      queryType: "telno",
+      table: localSessionData.tableName,
+    });
+    isExistingTelno.value = response.status === 200;
+  } catch (error) {
+    isExistingTelno.value = false;
+    if (error.response && error.response.status === 404) {
+      isExistingTelno.value = false;
+    } else {
+      handleError(error);
+    }
+  }
+};
 
-    const resetTelnoStatus = () => {
-      message.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
+const checkDuplicateEmail = async () => {
+  try {
+    const response = await axios.post(APIs.GET_USER_INFO, {
+      query: userData.value.email,
+      queryType: "email",
+      table: localSessionData.tableName,
+    });
+    isExistingEmail.value = response.status === 200;
+  } catch (error) {
+    isExistingEmail.value = false;
+    if (error.response && error.response.status === 404) {
+      isExistingEmail.value = false;
+      message.value = "사용가능한 이메일입니다.";
+    } else {
+      handleError(error);
+    }
+  }
+};
+
+// 제출 함수
+const handleSubmit = async () => {
+  if (!isValidEmail.value) {
+    alert("이메일 유효확인을 해주세요");
+    return;
+  }
+
+  if (!validateInput()) return;
+
+  try {
+    const response = await axios.post(APIs.REGISTER_USER, {
+      ...userData.value,
+      table: localSessionData.tableName,
+    });
+    if (response.status === 200) {
+      message.value = "사용자가 성공적으로 등록되었습니다.";
       isValidTelno.value = false;
-    };
-
-    const checkAuthNumber = () => {
-      if (userData.value.authNumber.length === 6) compareAuthNumber();
-    };
-
-    const compareAuthNumber = async () => {
-      try {
-        const response = await axios.post(APIs.VERIFY_CODE, {
-          ...userData.value,
-          table: localSessionData.tableName,
-        });
-        if (response.status === 200) {
-          message.value = "인증번호가 확인되었습니다.";
-          isValidTelno.value = true;
-          authCodeInputMode.value = false;
-          userData.value.authNumber = "";
-        }
-      } catch (error) {
-        handleError(error);
-      }
-    };
-
-    // 유효성 검사
-    const validateTelno = () => {
-      const telnoPattern = /^\d{10,11}$/;
-      if (!telnoPattern.test(userData.value.telno)) {
-        alert("전화번호는 11자리 숫자로 입력해 주세요.");
-        return false;
-      }
-      return true;
-    };
-
-    const checkDuplicateId = async () => {
-      try {
-        const response = await axios.post(APIs.GET_USER_BY_TELNO, {
-          telno: userData.value.telno,
-          table: localSessionData.tableName,
-        });
-        isExistingTelno.value = response.status === 200;
-      } catch (error) {
-        isExistingTelno.value = false;
-        if (error.response && error.response.status === 404) {
-          // 404 오류일 경우 전화번호가 중복되지 않았음을 의미
-          isExistingTelno.value = false;
-        } else {
-          // 다른 오류일 경우 일반 오류 처리
-          handleError(error);
-        }
-      }
-    };
-
-    const validateInput = () => {
-      const { password, userName } = userData.value;
-      if (!password) return alert("비밀번호를 입력해 주세요.") && false;
-      if (!userName) return alert("사용자 이름을 입력해 주세요.") && false;
-      return true;
-    };
-
-    // 제출 함수
-    const handleSubmit = async () => {
-      if (!validateInput()) return;
-
-      try {
-        const response = await axios.post(APIs.REGISTER_USER, {
-          ...userData.value,
-          table: localSessionData.tableName,
-        });
-        if (response.status === 200) {
-          message.value = "사용자가 성공적으로 등록되었습니다.";
-          isValidTelno.value = false;
-        }
-      } catch (error) {
-        handleError(error);
-      }
-    };
-
-    // 에러 처리 함수
-    const handleError = (error) => {
-      message.value = error.response
-        ? error.response.data
-        : error.request
-        ? messageCommon.ERR_NETWORK
-        : messageCommon.ERR_ETC;
-    };
-
-    return {
-      userData,
-      message,
-      isValidTelno,
-      authCodeInputMode,
-      handleTelnoCheck,
-      handleSubmit,
-      checkAuthNumber,
-      resetTelnoStatus,
-    };
-  },
+    }
+  } catch (error) {
+    handleError(error);
+  }
+};
+const validateInput = () => {
+  const { password, userName } = userData.value;
+  if (!password) return alert("비밀번호를 입력해 주세요.") && false;
+  if (!userName) return alert("사용자 이름을 입력해 주세요.") && false;
+  return true;
+};
+const validateTelnoPattern = () => {
+  const telnoPattern = /^\d{10,11}$/;
+  if (!telnoPattern.test(userData.value.telno)) {
+    alert("전화번호는 11자리 숫자로 입력해 주세요.");
+    return false;
+  }
+  return true;
+};
+const validateEmailPattern = () => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(userData.value.email)) {
+    alert("유효하지 않은 이메일 형식입니다. 확인해 주세요.");
+    return false;
+  }
+  return true;
+};
+// 에러 처리 함수
+const handleError = (error) => {
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
 };
 </script>
 

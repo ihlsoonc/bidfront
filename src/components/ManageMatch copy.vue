@@ -194,7 +194,7 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
 import { fetchSessionUser } from "../utils/fetchSessionUser";
-import { handleLink } from "../utils/handleLink";
+import { navigate } from "../utils/navigate";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { fetchLocalSession } from "src/utils/fetchLocalSession";

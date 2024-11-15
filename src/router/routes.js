@@ -1,16 +1,15 @@
 const routes = [
-  // {
-  //   name: "/",
-  //   redirect: "/admin", // 루트 경로로 접근 시 /admin으로 리다이렉트
-  // },
+  //현재 context는 사용하지않음
   {
     path: "/",
-    component: () => import("components/UserHome.vue"),
+    component: () => import("src/components/UserHome.vue"),
+    props: { context: "user" },
     children: [
       {
         name: "userLogin",
         path: "userlogin",
         component: () => import("components/UserLogin.vue"),
+        props: { context: "user" },
       },
       {
         name: "changeUserPassword",
@@ -52,11 +51,13 @@ const routes = [
   {
     path: "/admin",
     component: () => import("components/AdminHome.vue"), // 관리자 기본 레이아웃
+    props: { context: "admin" },
     children: [
       {
         name: "adminLogin",
         path: "adminlogin",
         component: () => import("components/UserLogin.vue"),
+        props: { context: "admin" },
       }, // 관리자 로그인
       {
         name: "adminLogout",
@@ -117,12 +118,14 @@ const routes = [
   },
   {
     path: "/adminm",
-    component: () => import("components/AdminMHome.vue"), // 관리자 기본 레이아웃
+    component: () => import("components/AdminMHome.vue"),
+    props: { context: "adminm" },
     children: [
       {
         name: "adminMLogin",
         path: "adminmlogin",
         component: () => import("components/UserLogin.vue"),
+        props: { context: "adminm" },
       }, // 관리자 로그인
       {
         name: "adminMLogout",

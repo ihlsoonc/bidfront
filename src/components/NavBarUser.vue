@@ -18,7 +18,7 @@
         round
         dense
         label="경기장 선택"
-        @click="handleLinkAction('selectVenue')"
+        @click="handleClickAction('selectVenue')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />
@@ -28,27 +28,28 @@
         round
         dense
         label="사용자정보수정"
-        @click="handleLinkAction('updateUser')"
+        @click="handleClickAction('updateUser')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />
       &nbsp;&nbsp;&nbsp;&nbsp;
-      <!-- <q-btn
+      <q-btn
         flat
         round
         dense
-        label="로그인"
-        :disable="isLoggedIn"
-        @click="handleLinkAction('login')"
+        icon="home"
+        @click="handleClickAction('login')"
         v-if="$q.screen.gt.md"
       />
-      &nbsp;&nbsp;&nbsp;&nbsp; -->
+      &nbsp;&nbsp;&nbsp;&nbsp;
+
       <q-btn
         flat
         round
         dense
         label="로그아웃"
-        @click="handleLinkAction('logout')"
+        icon="logout"
+        @click="handleClickAction('logout')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />
@@ -61,7 +62,7 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('selectVenue')"
+        @click="handleClickAction('selectVenue')"
         :disable="!isLoggedIn"
       >
         <q-item-section>경기장선택</q-item-section>
@@ -70,7 +71,7 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('updateUser')"
+        @click="handleClickAction('updateUser')"
         :disable="!isLoggedIn"
       >
         <q-item-section>사용자 정보 수정</q-item-section>
@@ -79,26 +80,26 @@
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('login')"
+        @click="handleClickAction('login')"
         :disable="isLoggedIn"
       >
-        <q-item-section>로그인</q-item-section>
+        <q-icon name="home" />홈
       </q-item>
 
       <q-item
         clickable
         v-ripple
-        @click="handleLinkAction('logout')"
+        @click="handleClickAction('logout')"
         :disable="!isLoggedIn"
       >
-        <q-item-section>로그아웃</q-item-section>
+        <q-icon name="logout" />로그아웃
       </q-item>
     </q-list>
   </q-drawer>
 </template>
 
 <script setup>
-import { ref, toRefs, watch, onMounted } from "vue";
+import { ref, toRefs, onMounted } from "vue";
 
 const props = defineProps({
   isLoggedIn: {
@@ -115,7 +116,8 @@ const { isLoggedIn } = toRefs(props);
 const { hasSelectedMatch } = toRefs(props);
 const leftDrawerOpen = ref(false);
 
-const handleLinkAction = (action) => {
+const handleClickAction = (action) => {
+  leftDrawerOpen.value = false;
   emit("link-action", action);
 };
 
@@ -129,9 +131,5 @@ onMounted(() => {});
 <style scoped>
 .q-toolbar-title {
   flex-grow: 1;
-}
-
-.disabled {
-  pointer-events: none;
 }
 </style>

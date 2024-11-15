@@ -17,69 +17,71 @@
         flat
         round
         dense
-        label="경기장 선택"
-        @click="handleLinkAction('selectVenue')"
+        label="경기장선택"
+        @click="handleClickAction('selectVenue')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="입찰현황 및 낙찰진행"
-        @click="handleLinkAction('bidResults')"
+        @click="handleClickAction('bids')"
         :disable="!isLoggedIn || !hasSelectedMatch"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="대회관리"
-        @click="handleLinkAction('manageMatch')"
+        @click="handleClickAction('manageMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="대회승인"
-        @click="handleLinkAction('approveMatch')"
+        @click="handleClickAction('approveMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="좌석가격입력"
-        @click="handleLinkAction('updateSeatPrice')"
+        @click="handleClickAction('updateSeatPrice')"
         :disable="!isLoggedIn || !hasSelectedMatch"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="경기장 등록 및 수정"
-        @click="handleLinkAction('manageVenue')"
+        @click="handleClickAction('manageVenue')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <q-btn
+        flat
+        round
+        dense
+        icon="home"
+        @click="handleClickAction('login')"
+        v-if="$q.screen.gt.md"
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <q-btn
         flat
         round
         dense
         label="로그아웃"
-        @click="handleLinkAction('logout')"
+        icon="logout"
+        @click="handleClickAction('logout')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />
@@ -91,7 +93,7 @@
     <q-list>
       <q-item
         clickable
-        @click="handleLinkAction('selectVenue')"
+        @click="handleClickAction('selectVenue')"
         :disabled="!isLoggedIn"
       >
         <q-item-section>경기장 선택</q-item-section>
@@ -99,7 +101,7 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('bidResults')"
+        @click="handleClickAction('bids')"
         :disable="!isLoggedIn || !hasSelectedMatch"
       >
         <q-item-section>입찰현황 및 낙찰진행</q-item-section>
@@ -107,7 +109,7 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('manageMatch')"
+        @click="handleClickAction('manageMatch')"
         :disable="!isLoggedIn"
       >
         <q-item-section>대회관리</q-item-section>
@@ -115,7 +117,7 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('approveMatch')"
+        @click="handleClickAction('approveMatch')"
         :disable="!isLoggedIn"
       >
         <q-item-section>대회승인</q-item-section>
@@ -123,7 +125,7 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('updateSeatPrice')"
+        @click="handleClickAction('updateSeatPrice')"
         :disable="!isLoggedIn || !hasSelectedMatch"
       >
         <q-item-section>좌석가격입력</q-item-section>
@@ -131,7 +133,7 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('manageVenue')"
+        @click="handleClickAction('manageVenue')"
         :disable="!isLoggedIn"
       >
         <q-item-section>경기장 등록 및 수정</q-item-section>
@@ -139,61 +141,43 @@
 
       <q-item
         clickable
-        @click="handleLinkAction('logout')"
+        @click="handleClickAction('logout')"
         :disable="!isLoggedIn"
+        icon="logout"
       >
-        <q-item-section>로그아웃</q-item-section>
+        <q-icon name="logout" />로그아웃
       </q-item>
     </q-list>
   </q-drawer>
 </template>
 
-<script>
-import { ref, watch, onMounted } from "vue";
+<script setup>
+import { ref, toRefs, onMounted } from "vue";
+import { useQuasar } from "quasar";
 
-export default {
-  name: "NavBarAdmin",
-  emits: ["link-action"],
-  props: {
-    isLoggedIn: {
-      type: Boolean,
-      default: false,
-    },
-    hasSelectedMatch: {
-      type: Boolean,
-      default: false,
-    },
+const props = defineProps({
+  isLoggedIn: {
+    type: Boolean,
+    default: false,
   },
-  setup(props, { emit }) {
-    const isLoggedIn = ref(props.isLoggedIn);
-    const leftDrawerOpen = ref(false);
-
-    const handleLinkAction = (action) => {
-      emit("link-action", action); // 여기와 일치
-    };
-
-    const updateStatus = () => {
-      isLoggedIn.value = props.isLoggedIn;
-    };
-
-    const toggleDrawer = () => {
-      leftDrawerOpen.value = !leftDrawerOpen.value;
-    };
-
-    watch([() => props.isLoggedIn], () => {
-      updateStatus();
-    });
-
-    onMounted(() => {
-      updateStatus();
-    });
-
-    return {
-      handleLinkAction,
-      toggleDrawer,
-      leftDrawerOpen,
-    };
+  hasSelectedMatch: {
+    type: Boolean,
+    default: false,
   },
+});
+
+const emit = defineEmits(["link-action"]);
+const { isLoggedIn } = toRefs(props);
+const { hasSelectedMatch } = toRefs(props);
+const leftDrawerOpen = ref(false);
+
+const handleClickAction = (action) => {
+  leftDrawerOpen.value = false;
+  emit("link-action", action);
+};
+
+const toggleDrawer = () => {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
 };
 </script>
 
