@@ -51,7 +51,7 @@
             flat
           />
           <q-btn
-            v-if="isNotAdmin"
+            v-if="!isRootUser"
             label="회원가입"
             @click="handleNavigate('register')"
             flat
@@ -66,6 +66,7 @@
 import { ref, onMounted, defineEmits } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
+
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
@@ -75,7 +76,7 @@ const router = useRouter();
 const emit = defineEmits(["update-status"]);
 
 const userData = ref({ query: "", password: "" });
-const isNotAdmin = ref(false);
+const isRootUser = ref(false);
 const message = ref("");
 let localSessionData = {};
 let sessionResults = {};
@@ -158,7 +159,7 @@ const resetLoginStatus = () =>
 // 세션 데이터 확인 및 초기 메시지 설정
 const initializeSession = async () => {
   localSessionData = fetchLocalSession(["tableName", "userClass"]);
-  isNotAdmin.value = localSessionData.userClass !== "admin";
+  isRootUser.value = localSessionData.userClass === "admin";
 
   sessionResults = await fetchSessionUser(localSessionData.userClass);
   if (sessionResults.success) {

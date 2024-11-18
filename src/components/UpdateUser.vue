@@ -25,11 +25,11 @@
         :readonly="updateMode"
         class="q-mb-md"
       />
-      <q-banner v-if="message" type="info">{{ message }}</q-banner>
-      <br />
+
       <q-btn type="submit" label="조회" color="primary" class="full-width" />
     </q-form>
-
+    <q-banner v-if="message" type="info">{{ message }}</q-banner>
+    <br />
     <!-- 사용자 정보 수정 폼 -->
     <div v-if="updateMode && userData" class="q-mt-lg">
       <q-form @submit.prevent="handleUpdate">
@@ -53,7 +53,7 @@
         <q-btn
           label="이메일 유효 확인"
           color="primary"
-          @click="handleEmailCheck"
+          @click="validateEmail"
           class="q-mb-md"
         />
 
@@ -91,22 +91,11 @@
           outlined
           class="q-mb-md"
         />
+        <button push color="white" text-color="blue-grey-14" type="submit">
+          수정 내용 제출
+        </button>
+        <button type="reset" @click="handleReset">취소</button>
       </q-form>
-      <q-btn
-        push
-        color="white"
-        text-color="blue-grey-14"
-        label="수정 내용 제출"
-        class="q-mt-md col-xs-12 col-sm-6"
-      />
-      <q-btn
-        push
-        color="white"
-        text-color="deep-orange-14"
-        label="취소"
-        @click="handleReset"
-        class="q-mt-md col-xs-12 col-sm-6"
-      />
     </div>
   </q-page>
 </template>
@@ -121,14 +110,14 @@ import { ADMIN_TYPES } from "../utils/ADMIN_TYPES";
 
 // 상수 및 세션 관련 변수 선언
 let localSessionData = {};
-let userClass = "";
 
 // 입력 및 상태 관련 ref 선언
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
 const password = ref(""); // 비밀번호
 const updateMode = ref(false);
 const isAdmin = ref(false);
-const validEmail = ref(true);
+const isValidEmail = ref(false);
+const isExistingEmail = ref(false);
 const userData = ref(null); // 조회된 사용자 정보
 const passwordMsg = ref(""); // 비밀번호 관련 메시지
 const message = ref(""); // 상태 메시지
@@ -142,7 +131,7 @@ const adminTypesOptions = Object.keys(ADMIN_TYPES).map((key) => ({
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
   try {
-    const response = await axios.post(APIs.GET_USER_INFO, {
+    const response = await axios.post(APIs.GET_USER_INFO_WITH_PASSWORD, {
       query: searchQuery.value,
       password: password.value,
       queryType: "telno",
@@ -181,17 +170,49 @@ const handleUpdate = async () => {
 
 // 이메일 유효 확인 및 수정 처리
 const handleEmailChange = () => {
-  validEmail.value = false;
+  isValidEmail.value = false;
 };
 
-const handleEmailCheck = () => {
-  const email = userData.value.email.trim();
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(email)) {
-    alert("유효한 이메일 형식을 입력해 주세요.");
+// 전화번호 인증 관련 함수
+const validateEmail = async () => {
+  if (!validateEmailPattern()) return;
+  await checkDuplicateEmail();
+
+  if (isExistingEmail.value) {
+    alert("등록된 이메일이 있습니다. 다시 입력해주세요.");
+    message.value = "";
+    isValidEmail.value = false;
     return;
   }
-  validEmail.value = true;
+  message.value = "사용가능한 이메일입니다.";
+  isValidEmail.value = true;
+};
+
+const validateEmailPattern = () => {
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(userData.value.email)) {
+    alert("유효하지 않은 이메일 형식입니다. 확인해 주세요.");
+    return false;
+  }
+  return true;
+};
+
+const checkDuplicateEmail = async () => {
+  try {
+    const response = await axios.post(APIs.GET_EMAIL_COUNT, {
+      telno: userData.value.telno,
+      email: userData.value.email,
+      table: localSessionData.tableName,
+    });
+    let emailCount = response.data.email_count;
+    if (emailCount > 0) {
+      isExistingEmail.value = true;
+    } else {
+      isExistingEmail.value = false;
+    }
+  } catch (error) {
+    handleError(error);
+  }
 };
 
 // 입력값 검증 함수
@@ -219,7 +240,7 @@ const validateInput = (userData) => {
     return false;
   }
 
-  if (!validEmail.value) {
+  if (!isValidEmail.value) {
     alert("이메일 유효 확인을 해주세요.");
     return false;
   }

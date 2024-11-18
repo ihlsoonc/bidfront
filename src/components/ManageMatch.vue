@@ -85,29 +85,32 @@
             class="col-12 col-md-6"
           />
           <div>
-            <q-select
-              v-model="matchData.venueName"
-              label="경기장"
-              :options="venueOptions"
-              :disable="
-                (!insertInputMode && !updateInputMode) || deleteConfirmMode
-              "
-              class="col-12 col-md-6"
-              @update:model-value="handleVenueChange"
-            />
-            <!-- 현재 선택된 경기장 이름을 표시 -->
+            <div class="rowflex-container">
+              경기장&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <q-select
+                v-model="matchData.venueName"
+                :options="venueOptions"
+                :disable="deleteConfirmMode"
+                class="col-12 col-md-6"
+                @update:model-value="handleVenueChange"
+              />
+            </div>
+            <div class="rowflex-container">
+              입찰여부&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+              <q-select
+                v-model="matchData.bidLable"
+                :options="bidOptions"
+                class="col-12 col-md-6"
+                :disable="deleteConfirmMode"
+                @update:model-value="handleBidAvaialableChange"
+              />
+            </div>
+            <!-- 현재 선택된 경기장 코드  -->
             <div hidden>
               {{ matchData.venueCd }}
             </div>
-            <q-select
-              v-model="matchData.bidLable"
-              label="입찰 여부"
-              :options="bidOptions"
-              class="col-12 col-md-6"
-              :disable="deleteConfirmMode"
-              @update:model-value="handleBidAvaialableChange"
-            />
             <div hidden>
+              <!-- 현재 선택된 입찰 가능여부 코드  -->
               {{ matchData.isBidAvailable }}
             </div>
           </div>
@@ -168,11 +171,11 @@
           />
         </div>
         <div class="row q-col-gutter-md">
-          <!-- q-input에서 input으로 수정함  -->
+          <!-- q-input에서 input으로 수정함 q-input의 경우 오류발생 -->
           <input
             type="file"
             @change="handleFileChange"
-            :disable="deleteConfirmMode"
+            :disabled="deleteConfirmMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -206,6 +209,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
+
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
@@ -220,6 +224,7 @@ let localSessionData = {};
 let sessionResults = {};
 let newVenueCd = "";
 let newBidCd = "";
+let newFileSelected = false;
 
 // Reactive 상태
 const matchArray = ref([]);
@@ -239,6 +244,7 @@ const matchData = ref({
   file: null,
   fileName: "",
 });
+
 const insertInputMode = ref(false);
 const updateInputMode = ref(false);
 const deleteConfirmMode = ref(false);
@@ -288,9 +294,14 @@ const columns = [
   { name: "bidLable", label: "입찰 허용 여부", field: "bidLable" },
   { name: "bid_open_time", label: "입찰 개시", field: "bid_open_time" },
   { name: "bid_close_time", label: "입찰 종료", field: "bid_close_time" },
-  { name: "approveStatus", label: "상태", field: "approveStatus" }, // 승인 상태 필드
+  { name: "approveStatus", label: "상태", field: "approveStatus" },
   { name: "actions", label: "변경", align: "center" },
 ];
+
+const generateRandomNumber = () => {
+  const randomNum = Math.floor(Math.random() * 1e10);
+  return randomNum.toString().padStart(10, "0");
+};
 
 const handleVenueChange = (newValue) => {
   newVenueCd = newValue.value; // 선택된 값을 저장
@@ -302,20 +313,14 @@ const handleBidAvaialableChange = (newValue) => {
 
 const handleFileChange = (event) => {
   const file = event.target.files ? event.target.files[0] : null;
-
   if (file) {
-    // 파일이 존재할 경우 match_no와 파일명을 결합
+    newFileSelected = true;
     matchData.value.file = file;
-    alert("matchno " + matchData.value.matchNumber);
-    matchData.value.fileName = `${matchData.value.matchNumber}_${file.name}`;
-  } else {
-    // 파일이 없을 경우 오류 메시지 출력
-    fileMessage.value("파일이 선택되지 않았습니다.");
+    matchData.value.fileName = file.name;
   }
 };
 
 const fetchMatches = async () => {
-  console.log("sessionResults", sessionResults);
   try {
     const response = await axios.get(APIs.GET_ALLMATCHES, {
       params: {
@@ -348,17 +353,22 @@ const handleSubmit = async () => {
   if (!deleteConfirmMode.value && !validateInput()) return;
 
   let venueCd;
-
   if (newVenueCd) {
     venueCd = newVenueCd;
   } else {
     venueCd = matchData.value.venueCd;
   }
+
   let bidCd;
   if (newBidCd) {
     bidCd = newBidCd;
   } else {
     bidCd = matchData.value.isBidAvailable;
+  }
+
+  if (newFileSelected) {
+    const uniqueId = generateRandomNumber();
+    matchData.value.fileName = uniqueId + "_" + matchData.value.fileName;
   }
   const requestData = {
     ...matchData.value,
@@ -390,7 +400,6 @@ const handleSubmit = async () => {
   }
 
   const apiUrl = apiMapping[currentMode];
-
   try {
     // API 요청 시도
     const response = await axios.post(apiUrl, requestData);
@@ -398,9 +407,9 @@ const handleSubmit = async () => {
     // 응답 성공 확인
     if (response.status === 200) {
       message.value = response.data.message;
-
       // 파일 업로드 확인
-      if (updateInputMode.value || insertInputMode.value) {
+      if ((updateInputMode.value || insertInputMode.value) && newFileSelected) {
+        alert("첨부화일이 업로드되었습니다.");
         handleFileUpload();
       }
 
@@ -419,28 +428,24 @@ const handleSubmitCancel = () => {
 };
 
 const handleFileUpload = async () => {
-  if (matchData.value.file) {
-    const formData = new FormData();
+  const formData = new FormData();
 
-    // FormData에 파일 추가 (세 번째 인수로 파일명을 지정)
-    formData.append("file", matchData.value.file, matchData.value.fileName);
+  // FormData에 파일 추가 (세 번째 인수로 파일명을 지정)
+  formData.append("file", matchData.value.file, matchData.value.fileName);
 
-    try {
-      // 서버로 파일 업로드
-      const response = await axios.post(APIs.UPLOAD_MATCHINFO, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data", // 파일 업로드에 적합한 헤더 설정
-        },
-      });
+  try {
+    // 서버로 파일 업로드
+    const response = await axios.post(APIs.UPLOAD_MATCHINFO, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data", // 파일 업로드에 적합한 헤더 설정
+      },
+    });
 
-      if (response.status === 200) {
-        fileMessage.value = "파일 업로드가 성공적으로 수행되었습니다.";
-      }
-    } catch (error) {
-      handleError(error);
+    if (response.status === 200) {
+      fileMessage.value = "파일 업로드가 성공적으로 수행되었습니다.";
     }
-  } else {
-    fileMessage.value = "업로드할 파일이 지정되지 않았습니다.";
+  } catch (error) {
+    handleError(error);
   }
 };
 
@@ -471,6 +476,7 @@ const handleInsert = () => {
   resetForm();
   resetState();
   resetMessage();
+  resetForm();
   insertInputMode.value = true;
 };
 
@@ -595,6 +601,7 @@ const resetState = () => {
   insertInputMode.value = false;
   updateInputMode.value = false;
   deleteConfirmMode.value = false;
+  newFileSelected = false;
 };
 
 const resetForm = () => {

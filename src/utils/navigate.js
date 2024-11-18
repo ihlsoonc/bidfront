@@ -1,13 +1,6 @@
 import { url } from "./urls";
 
 export const navigate = (router, userClass, action, query = null) => {
-  console.log("navigate 호출:", {
-    router,
-    userClass,
-    action,
-    query,
-  });
-
   const urlTogo = url[action]?.[userClass];
   urlTogo
     ? router

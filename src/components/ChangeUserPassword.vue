@@ -113,9 +113,10 @@ import axios from "axios";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
-let userClass = "";
+
 let localSessionData = {};
 const route = useRoute();
+
 const activeTab = ref("");
 const id = ref("");
 const currentPassword = ref("");
@@ -192,7 +193,7 @@ const handleValidateUser = async () => {
   }
 
   try {
-    const response = await axios.post(APIs.GET_USER_INFO, {
+    const response = await axios.post(APIs.GET_USER_INFO_WITH_PASSWORD, {
       query: id.value,
       queryType: "telno",
       password: currentPassword.value,

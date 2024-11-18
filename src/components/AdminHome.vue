@@ -8,6 +8,7 @@
     />
     <!-- 페이지 컨테이너 -->
     <q-page-container>
+      <!-- 라우터 뷰를 삽입하고 상태 업데이트 이벤트 처리 -->
       <router-view @update-status="handleUpdateStatus" />
     </q-page-container>
   </q-layout>
@@ -18,11 +19,11 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar } from "quasar";
 import axios from "axios";
-import { APIs } from "../utils/APIs";
 
-import NavBarAdmin from "./NavBarAdmin.vue";
-import { navigate } from "../utils/navigate";
-import { setLocalSession } from "../utils/sessionFunctions";
+import { APIs } from "../utils/APIs"; // API 엔드포인트 정의
+import NavBarAdmin from "./NavBarAdmin.vue"; // 네비게이션 바 컴포넌트
+import { navigate } from "../utils/navigate"; // 페이지 이동 유틸리티 함수
+import { setLocalSession } from "../utils/sessionFunctions"; // 세션 설정 유틸리티 함수
 
 // Quasar와 Vue Router 사용 설정
 const router = useRouter();
@@ -74,6 +75,7 @@ const handleNavigate = async (action) => {
 
 // 컴포넌트 마운트 시 실행
 onMounted(() => {
+  // 사용자 세션 설정
   setLocalSession(userClass, {
     tableName: userTable, // 사용자 테이블명 설정
     userClass: userClass, // 사용자 클래스 설정

@@ -96,7 +96,6 @@ const props = defineProps({
   totalWinAmount: Number,
   totalWinCount: Number,
   totalBidAmount: Number,
-  isApproved: Boolean,
 });
 
 const emit = defineEmits(["toggleHistory"]);

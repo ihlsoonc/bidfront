@@ -70,14 +70,14 @@ const apiMap = {
 };
 const emit = defineEmits(["update-status"]);
 
-const router = useRouter();
-const isAdmin = ref(false);
-const matchArray = ref([]);
-const selectedButton = ref(null);
-const message = ref("");
-
 let sessionResults = {};
 let localSessionData = {};
+const router = useRouter();
+
+const matchArray = ref([]);
+const selectedButton = ref(null);
+const isAdmin = ref(false);
+const message = ref("");
 
 // 서버에서 경기 목록을 가져오는 함수
 const fetchMatches = async () => {

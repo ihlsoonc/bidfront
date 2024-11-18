@@ -65,9 +65,9 @@ const BID_OPEN = "O";
 let localSessionData = {};
 let sessionResults = {};
 let matchNumber = 0;
+let queryTelno = "";
 const router = useRouter();
 
-const queryTelno = ref("");
 const isClosedBid = ref(false);
 const isApproved = ref(false);
 const selectedHistoryButton = ref(-1);
@@ -84,6 +84,13 @@ const bidStatus = ref({});
 const paymentData = ref({});
 const message = ref("");
 const tableColumns = ref([
+  {
+    name: "bidWonStatus",
+    required: true,
+    label: "낙찰상태",
+    align: "left",
+    field: (row) => row.bidWonStatus,
+  },
   {
     name: "seat_no",
     required: true,
@@ -363,6 +370,7 @@ const submitBid = async () => {
 
     if (response.status === 200) {
       // 응답 상태가 200일 경우
+      alert("성공적으로 입찰이 등록되었습니다.");
       message.value = response.data.message;
       fetchMyLast(); // 나의 입찰 데이터 다시 불러오기
       fetchMyBids(); // 나의 입찰 데이터 다시 불러오기
@@ -443,7 +451,8 @@ const handlePaySubmit = () => {
 };
 
 function isMobile() {
-  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  return true;
+  // return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
 const handleSelectVenue = () => {
@@ -511,50 +520,28 @@ const fetchData = async () => {
   }
 };
 
-const fetchSessionUserIdNew = async () => {
+const fetchSessionUserNew = async () => {
   try {
-    console.log("API 호출 시작");
     const response = await axios.get(APIs.GET_SESSION_USER, {
       withCredentials: true,
     });
-    console.log("API 응답 수신 완료:", response);
 
     sessionResults = response.data;
-    console.log("=== 세션 데이터:", sessionResults);
-
-    console.log("전화번호 알림 표시 완료");
 
     sessionStorage.setItem("userName", sessionResults.userName);
-    console.log(
-      "sessionStorage에 userName 저장 완료:",
-      sessionResults.userName
-    );
-
-    if (queryTelno.value) {
-      console.log("queryTelno.value가 존재함, 데이터 가져오기 시작");
+    if (queryTelno) {
       await fetchData();
-      console.log("데이터 가져오기 완료, 입찰 화면으로 이동");
       handleBackToBids();
     } else {
-      console.log(
-        "queryTelno.value가 존재하지 않음, 전화번호 알림 표시 및 데이터 가져오기 시작"
-      );
       await fetchData();
-      console.log("데이터 가져오기 완료");
     }
   } catch (error) {
-    console.log("오류 발생:", error);
-
     message.value = error.response ? error.response.data : error.response;
-    console.log("오류 메시지 설정 완료:", message.value);
 
-    if (queryTelno.value) {
-      console.log("queryTelno.value가 존재함, 세션 복구 시작");
-      await restoreSession(queryTelno.value, localSessionData.userName);
-      console.log("세션 복구 완료, 입찰 화면으로 이동");
+    if (queryTelno) {
+      await restoreSession(queryTelno, localSessionData.userName);
       handleBackToBids();
     } else {
-      console.log("queryTelno.value가 존재하지 않음, 로그인 화면으로 이동");
       handleBackToLogin();
     }
   }
@@ -583,10 +570,10 @@ onMounted(async () => {
   const params = new URLSearchParams(queryString);
 
   if (params.has("telno")) {
-    queryTelno.value = params.get("telno");
+    queryTelno = params.get("telno");
     console.log("returned from payment----------- telno :" + queryTelno.value);
   }
-  await fetchSessionUserIdNew();
+  await fetchSessionUserNew();
 });
 </script>
 

@@ -13,9 +13,10 @@ export const APIs = reactive({
   REGISTER_USER: "http://localhost:5000/api/user/register",
   UPDATE_USER: "http://localhost:5000/api/user/update",
   GET_USER_INFO: "http://localhost:5000/api/user/getinfo-byquery",
-  GET_USER_BY_TELNO: "http://localhost:5000/api/user/getuser-bytelno",
+  GET_USER_INFO_WITH_PASSWORD:
+    "http://localhost:5000/api/user/getinfo-byquery-and-password",
   CHANGE_USER_PASSWORD: "http://localhost:5000/api/user/change-password",
-  FIND_USERID: "http://localhost:5000/api/user/find-id",
+  GET_EMAIL_COUNT: "http://localhost:5000/api/user/get-email-count",
 
   GET_SEATPRICE: "http://localhost:5000/api/seatprice/getbyid",
   UPDATE_SEATPRICE: "http://localhost:5000/api/seatprice/update",
@@ -30,10 +31,8 @@ export const APIs = reactive({
   GET_HIGHEST_BIDS: "http://localhost:5000/api/bid/get-highest-bids",
   SUBMIT_BID: "http://localhost:5000/api/bid/submit",
   AWARD_BID: "http://localhost:5000/api/bid/award",
-  INIT_BID: "http://localhost:5000/api/bid/initialize",
 
   GET_BIDSTATUS: "http://localhost:5000/api/match/status",
-  GET_MATCHBYID: "http://localhost:5000/api/match/getbyid",
   GET_ALLMATCHES: "http://localhost:5000/api/match/getall",
   GET_MYMATCHES: "http://localhost:5000/api/match/getmy",
   GET_ALL_APPROVED_MATCHES: "http://localhost:5000/api/match/getallapproved",
@@ -45,7 +44,6 @@ export const APIs = reactive({
   UPLOAD_MATCHINFO: "http://localhost:5000/api/files/upload",
   DOWNLOAD_MATCHINFO: "http://localhost:5000/api/files/download",
 
-  GET_VENUEBYCODE: "http://localhost:5000/api/vunue/getbycode",
   GET_ALL_VENUES: "http://localhost:5000/api/venue/getall",
   ADD_VENUE: "http://localhost:5000/api/venue/add",
   UPDATE_VENUE: "http://localhost:5000/api/venue/update",

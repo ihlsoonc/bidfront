@@ -34,7 +34,8 @@
         />
         <button @click="validateTelno" type="button">재발송</button>
       </div>
-
+      <!-- 메시지 박스 -->
+      <q-banner v-if="message" class="message-box">{{ message }}</q-banner>
       <!-- 사용자 정보 입력 -->
       <div v-if="isValidTelno">
         <label>
@@ -111,8 +112,6 @@
         <q-btn @click="handleSubmit" color="primary">입력 내용 제출</q-btn>
       </div>
     </div>
-    <!-- 메시지 박스 -->
-    <q-banner v-if="message" class="message-box">{{ message }}</q-banner>
   </div>
 </template>
 
@@ -122,6 +121,8 @@ import { ref } from "vue";
 import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
+
+let localSessionData = fetchLocalSession(["tableName", "userClass"]);
 
 // 사용자 데이터 초기화
 const userData = ref({
@@ -135,14 +136,12 @@ const userData = ref({
   addr2: "",
   userType: "",
 });
-
-const message = ref("");
 const isValidTelno = ref(false);
-const isValidEmail = ref(false);
-const authCodeInputMode = ref(false);
 const isExistingTelno = ref(false);
+const isValidEmail = ref(false);
 const isExistingEmail = ref(false);
-const localSessionData = fetchLocalSession(["tableName", "userClass"]);
+const authCodeInputMode = ref(false);
+const message = ref("");
 
 // 전화번호 인증 관련 함수
 const validateTelno = async () => {
@@ -183,7 +182,7 @@ const validateEmail = async () => {
     isValidEmail.value = false;
     return;
   }
-
+  alert("사용 가능한 이메일입니다.");
   isValidEmail.value = true;
 };
 
@@ -238,20 +237,20 @@ const checkDuplicateTelno = async () => {
 
 const checkDuplicateEmail = async () => {
   try {
-    const response = await axios.post(APIs.GET_USER_INFO, {
-      query: userData.value.email,
-      queryType: "email",
+    const response = await axios.post(APIs.GET_EMAIL_COUNT, {
+      telno: userData.value.telno,
+      email: userData.value.email,
       table: localSessionData.tableName,
     });
-    isExistingEmail.value = response.status === 200;
-  } catch (error) {
-    isExistingEmail.value = false;
-    if (error.response && error.response.status === 404) {
-      isExistingEmail.value = false;
-      message.value = "사용가능한 이메일입니다.";
+    let emailCount = response.data.email_count;
+    if (emailCount > 0) {
+      isExistingEmail.value = true;
     } else {
-      handleError(error);
+      message.value = "사용가능한 이메일입니다.";
+      isExistingEmail.value = false;
     }
+  } catch (error) {
+    handleError(error);
   }
 };
 

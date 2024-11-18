@@ -1,6 +1,6 @@
 import { Dialog } from "quasar";
 
-export const showConfirmationDialog = ({
+export const showConfirmDialog = ({
   title = "확인",
   message = "계속하시겠습니까?",
   okLabel = "예",

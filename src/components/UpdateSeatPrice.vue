@@ -157,7 +157,7 @@
 </template>
 
 <script setup>
-import { ref, toRaw, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import BidStatus from "./BidStatus.vue";
@@ -165,12 +165,14 @@ import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
 import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
-import { showConfirmationDialog } from "../utils/dialogUtils";
+import { showConfirmDialog } from "../utils/dialogUtils";
+
 //session
 let matchNumber = 0;
 let localSessionData = {};
 let sessionResults = {};
 const router = useRouter();
+
 //reactive
 const bidStatus = ref({});
 const seatArray = ref([]);
@@ -385,7 +387,7 @@ const handleRemoveRow = (row) => {
     return;
   }
 
-  showConfirmationDialog({
+  showConfirmDialog({
     title: "좌석 삭제 확인",
     message:
       "정말로 이 좌석을 삭제하시겠습니까? 최종삭제는 작업 종료 후 `수정 내역 제출버튼`을 누르면 반영됩니다.",
@@ -420,7 +422,7 @@ const handleCreatSeatArray = async () => {
   if (seatArray.value.length === 0) {
     showSeatCreatePrompt.value = true;
   } else {
-    showConfirmationDialog({
+    showConfirmDialog({
       title: "새로운 좌석 정보 생성",
       message:
         "현재 좌석이 모두 삭제된 후 새 좌석이 생성됩니다. 계속하시겠습니까?",
@@ -473,7 +475,7 @@ const submitCreateSeatArray = async () => {
 };
 
 const handleCancelEdit = () => {
-  showConfirmationDialog({
+  showConfirmDialog({
     title: "입력 내용 취소",
     message: "정말로 변경 내용을 취소하고 원래 상태로 되돌리시겠습니까?",
     okLabel: "예",

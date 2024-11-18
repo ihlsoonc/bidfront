@@ -1,10 +1,8 @@
 <template>
   <div>
-    <p>
-      좌석을 선택한 후 입찰 금액을 입력하세요. 입찰내용이 있는 좌석은 윤곽선으로
-      표시됨.
-    </p>
-
+    <br />
+    <p>입찰내용이 있는 좌석은 윤곽선으로 표시됨.</p>
+    <br />
     <div class="seat-grid">
       <q-btn
         v-for="seatNumber in 40"
@@ -54,6 +52,12 @@ const isSelected = (number) => {
 
 // 좌석에 입찰자가 있는지 확인하는 함수
 const hasBidders = (number) => {
+  // bidsArray가 유효한 배열인지 확인
+  if (!Array.isArray(props.bidsArray)) {
+    console.error("bidsArray is not defined or not an array.");
+    return false;
+  }
+
   const seat = props.bidsArray.find((s) => s.seat_no == number);
   return seat ? seat.total_bidders > 0 : false;
 };

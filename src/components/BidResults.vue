@@ -1,36 +1,39 @@
 <template>
   <q-page class="common-container">
+    <!-- 입찰 상태 표시 컴포넌트 -->
     <BidStatus :bidStatus="bidStatus" />
+
+    <!-- 메시지 표시 -->
     <div v-if="message" class="q-message q-pa-md bg-warning text-white">
       {{ message }}
     </div>
-    <div class="buttons-container">
-      <q-option-group
-        inline
-        :options="radioOptions"
-        v-model="selectedAction"
-        @update:model-value="handleActionChange"
-        class="q-mt-sm"
-      />
-    </div>
 
-    <!-- SeatMap 컴포넌트 -->
+    <!-- 좌석 배치도 컴포넌트 -->
     <SeatMap
       :selectedSeats="selectedSeats"
       @seatClick="handleSeatClick"
       :disabled="isClosedBid"
-      :seatBidArray="allSeatBidArray"
+      :bidsArray="allSeatBidArray"
     />
+    <!-- 입찰 좌석건수 금액 요약 -->
+    <br />
+    <div v-if="countBiddedSeats > 0" class="colomnflex-container">
+      <div class="spaced-span">
+        입찰 좌석수&nbsp;: {{ countBiddedSeats }}개 &nbsp; 입찰금액 합계:
+        {{ totalBidAmount }}원
+      </div>
+    </div>
 
     <div class="columnflex-container q-gutter-md">
       <q-card-section>
+        <!-- 낙찰 관련 버튼들 -->
         <q-btn
           push
           color="white"
           text-color="blue-grey-14"
           label="낙찰 진행"
           @click="handleAwardBid"
-          :disable="isClosedBid"
+          :disable="!canAwardBid"
         />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <q-btn
           push
@@ -38,6 +41,7 @@
           text-color="blue-grey-14"
           label="낙찰 결과 알림톡 보내기"
           @click="handleSendAlimtalk"
+          :disable="!canSendAlimtalk"
         />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <q-btn
           push
@@ -52,16 +56,11 @@
           text-color="deep-orange-14"
           label="데이터 다시 불러오기"
           @click="handleRefresh"
+          :disable="!canReFetch"
         />
       </q-card-section>
 
-      <div v-if="countSelectedSeats > 0" class="colomnflex-container">
-        <div class="spaced-span">
-          선택된 좌석수&nbsp;: {{ countSelectedSeats }}개&nbsp; 입찰
-          좌석수&nbsp;: {{ countbiddedSeats }}개&nbsp; 입찰금액 합계:
-          {{ bidTotal }}원 &nbsp; 합계 : {{ minBidAmount }}원
-        </div>
-      </div>
+      <!-- 입찰 내역 관리 컴포넌트 -->
       <BidsListAdmin
         :seats="bidsArray"
         :tableColumns="tableColumns"
@@ -69,18 +68,8 @@
         :totalWinAmount="totalWinAmount"
         :totalWinCount="totalWinCount"
         :totalBidAmount="totalBidAmount"
-        :isApproved="isApproved"
         @toggleHistory="toggleHistory"
       />
-      <div v-if="countSelectedSeats > 0">
-        <!-- 입찰금액입력란 및 제출결과 필드 Show -->
-        <!-- <SelectedSeatsDetails
-          :selectedSeats="selectedSeats"
-          :bidAmounts="[]"
-          :isUser="isUser"
-          :isClosedBid="isClosedBid"
-        /> -->
-      </div>
     </div>
   </q-page>
 </template>
@@ -92,23 +81,45 @@ import axios from "axios";
 
 import BidStatus from "./BidStatus.vue";
 import SeatMap from "./SeatMap.vue";
-import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
 import BidsListAdmin from "./BidsListAdmin.vue";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
 import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { showConfirmDialog } from "../utils/dialogUtils";
 
+// 라우터 설정 및 세션 변수
 const router = useRouter();
 let localSessionData = {};
 let sessionResults = {};
 let matchNumber = 0;
-const selectedHistoryButton = ref(-1);
-const radioOptions = [
-  { label: "전체좌석 보기", value: "all" },
-  { label: "입찰좌석 보기", value: "bidded" },
-];
+let biddedSeatCount = 0; // 입찰된 좌석 수
+
+const BID_WON = "Y";
+const OPEN_BID = "O";
+const CLOSED_BID = "C";
+const AWARDED_BID = "F";
+const PAID_BID = "Y";
+const ALIMTALK_SENT = "Y";
+
+// UI 관련 상태 변수
+const selectedHistoryButton = ref(-1); // 선택된 입찰 히스토리 버튼 상태
+const bidStatus = ref({}); // 입찰 상태 데이터
+const bidsArray = ref([]); // 현재 입찰 데이터 배열
+const isClosedBid = ref(false); // 입찰 종료 여부
+const canAwardBid = ref(false); // 낙찰 가능 여부
+const canSendAlimtalk = ref(false); // 알림톡 전송 가능 여부
+const canReFetch = ref(false); // 알림톡 전송 가능 여부
+const selectedSeats = ref([]); // 선택된 좌석 배열
+const allSeatBidArray = ref([]); // 전체 좌석 데이터 배열
+const countBiddedSeats = ref(0); // 선택된 좌석 수
+const totalBidAmount = ref(0); // 총 입찰 금액
+const totalWinAmount = ref(0); // 총 낙찰 금액
+const totalWinCount = ref(0); // 총 낙찰 좌석 수
+const message = ref(""); // 사용자 메시지
+
 const tableColumns = ref([
+  // 입찰 내역 테이블 열 정의
   {
     name: "bidWonStatus",
     required: true,
@@ -128,7 +139,7 @@ const tableColumns = ref([
     name: "user_info",
     label: "최고 응찰자",
     align: "left",
-    field: (row) => `${row.username} :`, // 사용자명
+    field: (row) => `${row.username} :`, // 최고 응찰자
   },
   {
     name: "bid_amount",
@@ -141,65 +152,15 @@ const tableColumns = ref([
     name: "total_bidders",
     label: "입찰자 수",
     align: "left",
-    field: (row) => `${row.total_bidders} :`, // 사용자명
+    field: (row) => `${row.total_bidders} :`, // 총 입찰자 수
   },
   {
     name: "total_bids",
     label: "전체 내용 보기",
     align: "left",
-    field: (row) => `${row.total_bids} :`, // 사용자명
+    field: (row) => `${row.total_bids} :`, // 총 입찰 건 수
   },
 ]);
-
-const bidsArray = ref([]);
-// const isUser = ref(false);
-const isClosedBid = ref(false);
-const isApproved = ref(false);
-const bidStatus = ref({});
-const biddedSeatCount = ref(0);
-const canAwardBid = ref(false);
-const selectedSeats = ref([]);
-const allSeatBidArray = ref([]);
-const countSelectedSeats = ref(0);
-const clickCount = ref(0);
-const countbiddedSeats = ref(0);
-const minBidAmount = ref(0);
-const bidTotal = ref(0);
-const totalBidAmount = ref(0);
-const totalWinAmount = ref(0);
-const totalWinCount = ref(0);
-const message = ref("");
-const selectedAction = ref("all");
-
-// 좌석 클릭 처리 함수
-const handleSeatClick = (index) => {
-  const MAX_SELECTION = 100;
-  let updatedSeats;
-
-  if (selectedSeats.value.some((seat) => seat.uniqueSeatId === index)) {
-    updatedSeats = selectedSeats.value.filter(
-      (seat) => seat.uniqueSeatId !== index
-    );
-  } else {
-    if (selectedSeats.value.length >= MAX_SELECTION) {
-      alert(`최대 ${MAX_SELECTION}개의 좌석만 선택할 수 있습니다.`);
-      return;
-    }
-    const seatData = allSeatBidArray.value.find(
-      (seat) => seat.uniqueSeatId === index
-    );
-    if (seatData) {
-      updatedSeats = [...selectedSeats.value, seatData];
-      clickCount.value += 1;
-    } else {
-      alert("선택한 좌석의 최저입찰가가 없습니다. 관리자에게 문의하세요.");
-      return;
-    }
-  }
-
-  selectedSeats.value = updatedSeats;
-  countSelectedSeats.value = updatedSeats.length;
-};
 
 // 경기 다시 선택
 const handleReSelect = () => {
@@ -208,46 +169,35 @@ const handleReSelect = () => {
 
 //새로운 경기내용 불러오기
 const handleRefresh = async () => {
+  await fetchBidStatus(matchNumber);
+  await fetchBidsTallies(matchNumber);
   await fetchHighestBids(matchNumber);
   await fetchBidsDetail(matchNumber);
-};
-
-// 전체 좌석 선택 시 처리 함수
-const handleAllClick = () => {
-  countbiddedSeats.value = 0;
-  message.value = "";
-  minBidAmount.value = 0;
-  bidTotal.value = 0;
-  clickCount.value = 0;
-  selectedSeats.value = allSeatBidArray.value;
-  countSelectedSeats.value = selectedSeats.value.length;
+  setButtons();
 };
 
 // 낙찰을 진행하는 함수
 const handleAwardBid = async () => {
-  // if (!canAwardBid.value) {
-  //   alert("낙찰을 진행할 수 없습니다.");
-  //   return;
-  // }
-
-  //테스트를 위해 계속 낙찰할 수 있도록
-  const isConfirmed = window.confirm("낙찰을 진행하겠습니까?");
-  if (!isConfirmed) return;
-
-  try {
-    const response = await axios.post(APIs.AWARD_BID, {
-      matchNumber: matchNumber,
-    });
-    if (response.status === 200) {
-      alert("성공적으로 낙찰 처리가 되었습니다.");
-      message.value = response.data.message;
-      await fetchBidStatus(matchNumber);
-      canAwardBid.value = false;
-    }
-  } catch (error) {
-    handleError(error);
+  if (!canAwardBid.value) {
+    alert("낙찰을 진행할 수 없습니다. 입찰 종료 후 가능합니다.");
+    return;
   }
 
+  showConfirmDialog({
+    title: "낙찰 진행 확인",
+    message: "낙찰을 진행하겠습니까?",
+    okLabel: "예",
+    cancelLabel: "아니오",
+    onOk: () => {
+      awardBid();
+    },
+    onCancel: () => {
+      alert("낙찰진행이 취소되었습니다.");
+    },
+  });
+};
+
+const awardBid = async () => {
   try {
     const response = await axios.post(APIs.AWARD_BID, {
       matchNumber: matchNumber,
@@ -256,7 +206,9 @@ const handleAwardBid = async () => {
       alert("성공적으로 낙찰 처리가 되었습니다.");
       message.value = response.data.message;
       await fetchBidStatus(matchNumber);
-      canAwardBid.value = false;
+      await fetchHighestBids(matchNumber);
+      await fetchBidsDetail(matchNumber);
+      setButtons();
     }
   } catch (error) {
     handleError(error);
@@ -265,9 +217,21 @@ const handleAwardBid = async () => {
 
 // 알림톡 보내기
 const handleSendAlimtalk = async () => {
-  const isConfirmed = window.confirm("알림톡을 보내시겠습니까?");
-  if (!isConfirmed) return;
+  showConfirmDialog({
+    title: "알림톡 전송 확인",
+    message: "알림톡을 보내시겠습니까?",
+    okLabel: "예",
+    cancelLabel: "아니오",
+    onOk: () => {
+      sendAlimtalk();
+    },
+    onCancel: () => {
+      alert("알림톡 전송이 취소되었습니다.");
+    },
+  });
+};
 
+const sendAlimtalk = async () => {
   try {
     await axios.post(
       APIs.SEND_KAKAO_ALIMTALK,
@@ -275,6 +239,7 @@ const handleSendAlimtalk = async () => {
       { withCredentials: true }
     );
     alert("알림톡이 전송되었습니다.");
+    canSendAlimtalk.value = false;
   } catch (error) {
     handleError(error);
   }
@@ -291,9 +256,6 @@ const fetchBidStatus = async (matchNumber) => {
 
     if (response.status === 200) {
       bidStatus.value = response.data;
-      if (bidStatus.value.bidStatusCode == "C" && biddedSeatCount.value > 0) {
-        canAwardBid.value = true;
-      }
     }
   } catch (error) {
     handleError(error);
@@ -310,21 +272,24 @@ const fetchHighestBids = async (matchNumber) => {
     // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
     bidsArray.value = response.data.map((seat) => {
       // 낙찰 여부에 따라 total_win_amount와 total_win_count를 업데이트
-      if (bidStatus.value.bid_open_status === "F" && seat.bid_won === "Y") {
+      if (
+        bidStatus.value.bid_open_status === AWARDED_BID &&
+        seat.bid_won === BID_WON
+      ) {
         totalWinAmount.value += seat.bid_amount || 0;
         totalWinCount.value++;
       }
       return {
         ...seat,
         bidWonStatus:
-          bidStatus.value.bid_open_status === "F"
-            ? seat.bid_won === "Y"
+          bidStatus.value.bid_open_status === AWARDED_BID
+            ? seat.bid_won === BID_WON
               ? "낙찰"
               : "유찰"
             : " ",
         paidStatus:
-          bidStatus.value.bid_open_status === "F"
-            ? seat.bid_paid === "Y"
+          bidStatus.value.bid_open_status === BID_WON
+            ? seat.bid_paid === PAID_BID
               ? "결제완료"
               : "미결제"
             : " ",
@@ -397,7 +362,7 @@ const fetchBidsTallies = async () => {
     allSeatBidArray.value = response.data.map((seat) => {
       const uniqueSeatId = Number(seat.seat_no);
       if (seat.total_bidders > 0) {
-        biddedSeatCount.value += 1;
+        biddedSeatCount += 1;
       }
       return { ...seat, uniqueSeatId: uniqueSeatId };
     });
@@ -405,7 +370,7 @@ const fetchBidsTallies = async () => {
     selectedSeats.value = allSeatBidArray.value.filter(
       (seat) => seat.total_bidders > 0
     );
-    countSelectedSeats.value = selectedSeats.value.length;
+    countBiddedSeats.value = selectedSeats.value.length;
   } catch (error) {
     handleError(error);
   }
@@ -421,6 +386,28 @@ const toggleHistory = (seat) => {
   }
 };
 
+const handleSeatClick = (index) => {
+  //no action here : 사용자 입찰화면에서 사용됨
+};
+
+const setButtons = () => {
+  canAwardBid.value = false;
+  canSendAlimtalk.value = false;
+  canReFetch.value = false;
+  if (bidStatus.value.bidStatusCode == CLOSED_BID && biddedSeatCount > 0) {
+    canAwardBid.value = true;
+  }
+  if (
+    bidStatus.value.bidStatusCode == AWARDED_BID &&
+    bidStatus.value.alimtalk_sent !== ALIMTALK_SENT
+  ) {
+    canSendAlimtalk.value = true;
+  }
+
+  if (bidStatus.value.bidStatusCode == OPEN_BID) {
+    canReFetch.value = true;
+  }
+};
 // 에러 핸들링
 const handleError = (error) => {
   message.value = error.response
@@ -430,32 +417,7 @@ const handleError = (error) => {
     : messageCommon.ERR_ETC;
 };
 
-watch(
-  selectedSeats,
-  () => {
-    const minBidAmountCalc = selectedSeats.value.reduce((sum, seat) => {
-      const chosenAmount =
-        seat.current_bid_amount > 0 ? seat.current_bid_amount : seat.seat_price;
-      return sum + (chosenAmount || 0);
-    }, 0);
-    minBidAmount.value = minBidAmountCalc;
-
-    const bidtotal = selectedSeats.value.reduce((sum, seat) => {
-      return sum + (seat.current_bid_amount || 0);
-    }, 0);
-    bidTotal.value = bidtotal;
-  },
-  { deep: true }
-);
-
-const handleActionChange = (value) => {
-  if (value === "all") {
-    handleAllClick();
-  } else if (value === "bidded") {
-    handleBiddedSeat();
-  }
-};
-
+// 세션 데이터 및 데이터 불러오기
 onMounted(async () => {
   localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
   matchNumber = localSessionData.matchNumber;
@@ -464,6 +426,7 @@ onMounted(async () => {
       sessionResults = await fetchSessionUser(localSessionData.userClass);
       await fetchBidStatus(matchNumber);
       await fetchBidsTallies();
+      setButtons();
       await fetchHighestBids(matchNumber);
       await fetchBidsDetail(matchNumber);
     } catch (error) {
