@@ -83,14 +83,6 @@
           class="q-mb-md"
         />
 
-        <q-select
-          v-if="isAdmin"
-          v-model="userData.userType"
-          :options="adminTypesOptions"
-          label="사용자 타입"
-          outlined
-          class="q-mb-md"
-        />
         <button push color="white" text-color="blue-grey-14" type="submit">
           수정 내용 제출
         </button>
@@ -103,13 +95,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import axiosInstance from "../utils/axiosInterceptor";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-import { ADMIN_TYPES } from "../utils/ADMIN_TYPES";
 
 // 상수 및 세션 관련 변수 선언
-let localSessionData = {};
+const localSessionData = fetchLocalSession(["userClass"]);
+const token = localStorage.getItem("authToken");
 
 // 입력 및 상태 관련 ref 선언
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
@@ -122,21 +115,23 @@ const userData = ref(null); // 조회된 사용자 정보
 const passwordMsg = ref(""); // 비밀번호 관련 메시지
 const message = ref(""); // 상태 메시지
 
-// 사용자 타입 옵션 설정
-const adminTypesOptions = Object.keys(ADMIN_TYPES).map((key) => ({
-  label: ADMIN_TYPES[key],
-  value: key,
-}));
-
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
   try {
-    const response = await axios.post(APIs.GET_USER_INFO_WITH_PASSWORD, {
-      query: searchQuery.value,
-      password: password.value,
-      queryType: "telno",
-      table: localSessionData.tableName,
-    });
+    const response = await axiosInstance.post(
+      APIs.GET_USER_WITH_PASSWORD,
+      {
+        query: searchQuery.value,
+        password: password.value,
+        queryType: "telno",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200 && response.data) {
       userData.value = response.data; // 조회된 사용자 정보 저장
@@ -154,10 +149,18 @@ const handleUpdate = async () => {
   if (!validateInput(userData)) return;
 
   try {
-    const response = await axios.post(APIs.UPDATE_USER, {
-      ...userData.value,
-      table: localSessionData.tableName,
-    });
+    const response = await axiosInstance.post(
+      APIs.UPDATE_USER,
+      {
+        ...userData.value,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200) {
       message.value = "사용자 정보가 성공적으로 수정되었습니다.";
@@ -173,7 +176,7 @@ const handleEmailChange = () => {
   isValidEmail.value = false;
 };
 
-// 전화번호 인증 관련 함수
+// 이메일 인증 관련 함수
 const validateEmail = async () => {
   if (!validateEmailPattern()) return;
   await checkDuplicateEmail();
@@ -199,10 +202,9 @@ const validateEmailPattern = () => {
 
 const checkDuplicateEmail = async () => {
   try {
-    const response = await axios.post(APIs.GET_EMAIL_COUNT, {
+    const response = await axiosInstance.post(APIs.GET_EMAIL_COUNT, {
       telno: userData.value.telno,
       email: userData.value.email,
-      table: localSessionData.tableName,
     });
     let emailCount = response.data.email_count;
     if (emailCount > 0) {
@@ -280,13 +282,7 @@ const resetLoginStatus = () => {
 
 // onMounted에서 테이블 이름 설정
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["tableName", "userClass"]);
-  const sessionResults = await fetchSessionUser(localSessionData.userClass);
-  if (!sessionResults.success) {
-    resetLoginStatus();
-    handleBackToLogin();
-  }
-  isAdmin.value = localSessionData.tableName === "admin";
+  isAdmin.value = localSessionData.userClass === "admin";
   passwordMsg.value = "사용자 정보 수정을 위해 비밀번호를 입력해주세요.";
 });
 </script>

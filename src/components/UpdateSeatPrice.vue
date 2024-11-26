@@ -88,7 +88,7 @@
 
         <div v-else>
           <br />
-          <q-title level="h6">좌석별 최소 입찰 가격</q-title>
+          <q-toolbar-title level="h6">좌석별 최소 입찰 가격</q-toolbar-title>
           <br />
           <q-table
             :rows="seatArray"
@@ -160,17 +160,18 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import BidStatus from "./BidStatus.vue";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { showConfirmDialog } from "../utils/dialogUtils";
 
 //session
 let matchNumber = 0;
-let localSessionData = {};
-let sessionResults = {};
+const localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
+const token = localStorage.getItem("authToken");
 const router = useRouter();
 
 //reactive
@@ -222,11 +223,14 @@ const columns = [
 
 const fetchBidStatus = async (matchNumber) => {
   try {
-    const response = await axios.get(
-      APIs.GET_BIDSTATUS,
-      { params: { matchNumber } },
-      { withCredentials: true }
-    );
+    const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
+      params: { matchNumber },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
+    });
+
     bidStatus.value = response.data;
     seatUpdateMode.value = bidStatus.value.bidStatusCode === INITIAL_BID_STATUS;
   } catch (error) {
@@ -236,9 +240,14 @@ const fetchBidStatus = async (matchNumber) => {
 
 const fetchSeats = async (matchNumber) => {
   try {
-    const response = await axios.get(APIs.GET_SEATPRICE, {
+    const response = await axiosInstance.get(APIs.GET_SEATPRICE, {
       params: { matchNumber },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
     });
+
     seatArray.value = response.data.map((seat) => ({ ...seat, matchNumber }));
     fetchedSeatArray.value = JSON.parse(JSON.stringify(seatArray.value));
   } catch (error) {
@@ -289,10 +298,20 @@ const handleSubmit = async () => {
 };
 const deleteSeats = async (seatArrayToDelete, matchNumber) => {
   try {
-    const response = await axios.post(APIs.DELETE_SEATPRICEARRAY, {
-      seatPriceArray: seatArrayToDelete,
-      matchNumber: matchNumber,
-    });
+    const response = await axiosInstance.post(
+      APIs.DELETE_SEATPRICEARRAY,
+      {
+        seatPriceArray: seatArrayToDelete,
+        matchNumber: matchNumber,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
+
     return response.data.message;
   } catch (error) {
     handleError(error);
@@ -302,10 +321,20 @@ const deleteSeats = async (seatArrayToDelete, matchNumber) => {
 
 const updateSeats = async (seatArrayToUpdate, matchNumber) => {
   try {
-    const response = await axios.post(APIs.UPDATE_SEATPRICEARRAY, {
-      seatPriceArray: seatArrayToUpdate,
-      matchNumber: matchNumber,
-    });
+    const response = await axiosInstance.post(
+      APIs.UPDATE_SEATPRICEARRAY,
+      {
+        seatPriceArray: seatArrayToUpdate,
+        matchNumber: matchNumber,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
+
     return response.data.message;
   } catch (error) {
     handleError(error);
@@ -509,14 +538,8 @@ const handleError = (error) => {
 };
 
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
   matchNumber = localSessionData.matchNumber;
   if (matchNumber) {
-    sessionResults = await fetchSessionUser(localSessionData.userClass);
-    if (!sessionResults.success) {
-      resetLoginStatus();
-      handleBackToLogin();
-    }
     await fetchBidStatus(matchNumber);
     await fetchSeats(matchNumber);
   } else {

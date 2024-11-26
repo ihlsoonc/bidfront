@@ -121,12 +121,13 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import axiosInstance from "../utils/axiosInterceptor";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-let sessionResults = {};
-let localSessionData = {};
+const localSessionData = fetchLocalSession(["userClass"]);
+const token = localStorage.getItem("authToken");
 const router = useRouter();
 
 const venueArray = ref([]);
@@ -168,7 +169,12 @@ const guideMessage = computed(() => {
 
 const fetchVenues = async () => {
   try {
-    const response = await axios.get(APIs.GET_ALL_VENUES);
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
+    });
     if (response.status === 200) {
       venueArray.value = response.data;
     }
@@ -186,12 +192,28 @@ const handleSubmit = async () => {
   let response;
   try {
     if (insertInputMode.value) {
-      response = await axios.post(APIs.ADD_VENUE, venueData.value);
+      response = await axiosInstance.post(APIs.ADD_VENUE, venueData.value, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
     } else if (updateInputMode.value) {
-      response = await axios.post(APIs.UPDATE_VENUE, venueData.value);
+      response = await axiosInstance.post(APIs.UPDATE_VENUE, venueData.value, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
     } else if (deleteConfirmMode.value) {
-      response = await axios.post(APIs.DELETE_VENUE, requestData);
+      response = await axiosInstance.post(APIs.DELETE_VENUE, requestData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      });
     }
+
     if (response.status === 200) {
       alert(response.data.message);
       message.value = response.data.message;
@@ -282,12 +304,6 @@ const resetLoginStatus = () => {
   emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
 };
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["userClass"]);
-  sessionResults = await fetchSessionUser(localSessionData.userClass);
-  if (!sessionResults.success) {
-    resetLoginStatus();
-    handleBackToLogin();
-  }
   await fetchVenues();
 });
 </script>

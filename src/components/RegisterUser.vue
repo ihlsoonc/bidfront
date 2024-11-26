@@ -39,13 +39,24 @@
       <!-- 사용자 정보 입력 -->
       <div v-if="isValidTelno">
         <label>
-          암호:
+          비밀번호:
           <input
             type="password"
             v-model="userData.password"
             class="input"
-            placeholder="암호를 입력하세요."
+            placeholder="비밀번호를 입력하세요."
             autocomplete="new-password"
+          />
+        </label>
+        <label>
+          비밀번호 확인:
+          <input
+            type="password"
+            v-model="userData.password2"
+            class="input"
+            placeholder="비밀번호를 다시 입력하세요."
+            autocomplete="new-password"
+            @input="checkPassword"
           />
         </label>
 
@@ -53,7 +64,7 @@
           사용자 이름:
           <input
             type="text"
-            v-model="userData.userName"
+            v-model="userData.username"
             class="input"
             placeholder="이름을 입력하세요."
             autocomplete="name"
@@ -77,7 +88,7 @@
           우편번호:
           <input
             type="number"
-            v-model="userData.postCode"
+            v-model="userData.postcode"
             class="input"
             placeholder="우편번호를 입력하세요."
             min="10000"
@@ -110,6 +121,7 @@
         <!-- 제출 버튼 -->
         <br /><br />
         <q-btn @click="handleSubmit" color="primary">입력 내용 제출</q-btn>
+        <q-btn @click="cancelSubmit" color="secondary">작업 취소</q-btn>
       </div>
     </div>
   </div>
@@ -117,24 +129,27 @@
 
 <script setup>
 import axios from "axios";
+import qs from "qs";
+import axiosInstance from "../utils/axiosInterceptor";
 import { ref } from "vue";
 import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-let localSessionData = fetchLocalSession(["tableName", "userClass"]);
+const localSessionData = fetchLocalSession(["userClass"]);
 
 // 사용자 데이터 초기화
 const userData = ref({
-  userId: "",
+  userid: "",
   password: "",
-  userName: "",
+  password2: "",
+  username: "",
   email: "",
   telno: "",
-  postCode: "",
+  postcode: "",
   addr1: "",
   addr2: "",
-  userType: "",
+  role: "",
 });
 const isValidTelno = ref(false);
 const isExistingTelno = ref(false);
@@ -159,9 +174,8 @@ const validateTelno = async () => {
   authCodeInputMode.value = true;
 
   try {
-    const response = await axios.post(APIs.SEND_ONE_SMS, {
+    const response = await axiosInstance.post(APIs.SEND_ONE_SMS, {
       ...userData.value,
-      table: localSessionData.tableName,
     });
     if (response.status === 200) {
       message.value = `인증번호가 발송되었습니다. ${response.data.verificationCode}`;
@@ -202,9 +216,8 @@ const checkAuthNumber = () => {
 
 const compareAuthNumber = async () => {
   try {
-    const response = await axios.post(APIs.VERIFY_CODE, {
+    const response = await axiosInstance.post(APIs.VERIFY_CODE, {
       ...userData.value,
-      table: localSessionData.tableName,
     });
     if (response.status === 200) {
       message.value = "인증번호가 확인되었습니다.";
@@ -219,28 +232,27 @@ const compareAuthNumber = async () => {
 
 const checkDuplicateTelno = async () => {
   try {
-    const response = await axios.post(APIs.GET_USER_INFO, {
-      query: userData.value.telno,
-      queryType: "telno",
-      table: localSessionData.tableName,
+    const response = await axiosInstance.post(APIs.GET_TELNO_COUNT, {
+      telno: userData.value.telno,
     });
-    isExistingTelno.value = response.status === 200;
+    let telnoCount = response.data.telno_count;
+    if (telnoCount > 0) {
+      isExistingTelno.value = true;
+    } else {
+      message.value = "사용가능한 전화번호입니다.";
+      isExistingTelno.value = false;
+    }
   } catch (error) {
     isExistingTelno.value = false;
-    if (error.response && error.response.status === 404) {
-      isExistingTelno.value = false;
-    } else {
-      handleError(error);
-    }
+    handleError(error);
   }
 };
 
 const checkDuplicateEmail = async () => {
   try {
-    const response = await axios.post(APIs.GET_EMAIL_COUNT, {
+    const response = await axiosInstance.post(APIs.GET_EMAIL_COUNT, {
       telno: userData.value.telno,
       email: userData.value.email,
-      table: localSessionData.tableName,
     });
     let emailCount = response.data.email_count;
     if (emailCount > 0) {
@@ -250,24 +262,37 @@ const checkDuplicateEmail = async () => {
       isExistingEmail.value = false;
     }
   } catch (error) {
+    isExistingEmail.value = false;
     handleError(error);
   }
 };
 
+const cancelSubmit = async () => {
+  isValidTelno.value = false;
+  message.value = "";
+};
 // 제출 함수
 const handleSubmit = async () => {
   if (!isValidEmail.value) {
     alert("이메일 유효확인을 해주세요");
     return;
   }
-
   if (!validateInput()) return;
 
+  userData.value.role = localSessionData.userClass;
   try {
-    const response = await axios.post(APIs.REGISTER_USER, {
-      ...userData.value,
-      table: localSessionData.tableName,
-    });
+    const response = await axiosInstance.post(
+      APIs.REGISTER_USER,
+      qs.stringify({
+        ...userData.value,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        withCredentials: true, // 쿠키와 함께 요청
+      }
+    );
     if (response.status === 200) {
       message.value = "사용자가 성공적으로 등록되었습니다.";
       isValidTelno.value = false;
@@ -277,11 +302,39 @@ const handleSubmit = async () => {
   }
 };
 const validateInput = () => {
-  const { password, userName } = userData.value;
-  if (!password) return alert("비밀번호를 입력해 주세요.") && false;
-  if (!userName) return alert("사용자 이름을 입력해 주세요.") && false;
+  const { password, password2, username } = userData.value;
+  if (!password) {
+    message.value = "비밀번호를 입력해 주세요.";
+    return false;
+  }
+  if (!password2) {
+    message.value = "확인 비밀번호를 입력해 주세요.";
+    return false;
+  }
+  if (password !== password2) {
+    message.value = "비밀번호가 일치하지 않습니다.";
+    return false;
+  }
+  if (!username) return alert("사용자 이름을 입력해 주세요.") && false;
   return true;
 };
+
+const checkPassword = () => {
+  const { password, password2, username } = userData.value;
+  if (!password) {
+    message.value = "비밀번호를 입력해 주세요.";
+    return false;
+  }
+  if (!password2) {
+    message.value = "확인 비밀번호를 입력해 주세요.";
+    return false;
+  }
+  if (password !== password2) {
+    message.value = "비밀번호가 일치하지 않습니다.";
+    return false;
+  }
+};
+
 const validateTelnoPattern = () => {
   const telnoPattern = /^\d{10,11}$/;
   if (!telnoPattern.test(userData.value.telno)) {

@@ -27,11 +27,6 @@ const routes = [
         component: () => import("components/UpdateUser.vue"),
       },
       {
-        name: "userLogout",
-        path: "userlogout",
-        component: () => import("components/UserLogout.vue"),
-      },
-      {
         name: "selectVenueUser",
         path: "selectvenueuser",
         component: () => import("components/SelectVenue.vue"),
@@ -59,11 +54,6 @@ const routes = [
         component: () => import("components/UserLogin.vue"),
         props: { context: "admin" },
       }, // 관리자 로그인
-      {
-        name: "adminLogout",
-        path: "adminlogout",
-        component: () => import("components/UserLogout.vue"),
-      }, // 관리자 로그아웃
       {
         name: "registerAdmin",
         path: "registeradmin",
@@ -127,11 +117,6 @@ const routes = [
         component: () => import("components/UserLogin.vue"),
         props: { context: "adminm" },
       }, // 관리자 로그인
-      {
-        name: "adminMLogout",
-        path: "adminmlogout",
-        component: () => import("components/UserLogout.vue"),
-      }, // 관리자 로그아웃
       {
         name: "registerAdminM",
         path: "registeradminm",

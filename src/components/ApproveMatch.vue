@@ -146,13 +146,19 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-let sessionResults = {};
-let localSessionData = {};
+const localSessionData = fetchLocalSession([
+  "userClass",
+  "venueCd",
+  "telno",
+  "role",
+]);
+const token = localStorage.getItem("authToken");
 const matchArray = ref([]);
 const matchData = ref({
   matchNumber: "",
@@ -211,13 +217,18 @@ const guideMessage = computed(() => {
 
 const fetchMatches = async () => {
   try {
-    const response = await axios.get(APIs.GET_ALLMATCHES, {
+    const response = await axiosInstance.get(APIs.GET_ALL_MATCHES, {
       params: {
-        telno: sessionResults.telno,
-        userType: sessionResults.userType,
+        telno: localSessionData.telno,
+        role: localSessionData.role,
         venueCd: localSessionData.venueCd,
       },
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
     });
+
     if (response.status === 200) {
       matchArray.value = response.data;
     }
@@ -269,11 +280,21 @@ const handleSubmit = async () => {
     let actionType = canDisapprove.value ? "N" : "Y";
     const requestData = {
       ...matchData.value,
-      telno: sessionResults.telno,
-      userType: sessionResults.userType,
+      telno: localSessionData.telno,
+      role: localSessionData.role,
       actionType,
     };
-    const response = await axios.post(APIs.APPROVE_MATCH, requestData);
+    const response = await axiosInstance.post(
+      APIs.APPROVE_MATCH, // 요청 URL
+      requestData, // 요청 데이터
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+        },
+        withCredentials: true, // 쿠키 사용을 위한 설정
+      }
+    );
+
     if (response.status === 200) {
       message.value = "성공적으로 작업이 수행되었습니다.";
       fetchMatches();
@@ -294,10 +315,15 @@ const downloadFile = async (fileName) => {
     return;
   }
   try {
-    const response = await axios.get(APIs.DOWNLOAD_MATCHINFO, {
+    const response = await axiosInstance.get(APIs.DOWNLOAD_MATCHINFO, {
       params: { fileName },
       responseType: "blob",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
     });
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -332,13 +358,6 @@ const resetState = () => {
 };
 
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["tableName", "userClass", "venueCd"]);
-  const sessionResults = await fetchSessionUser(localSessionData.userClass);
-
-  if (!sessionResults.success) {
-    resetLoginStatus();
-    handleBackToLogin();
-  }
   await fetchMatches();
 });
 </script>

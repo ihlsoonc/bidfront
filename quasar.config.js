@@ -7,9 +7,14 @@
 
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js
-
+const path = require("path"); // Node.js의 path 모듈 import
 const { configure } = require("quasar/wrappers");
+const distDir = path.resolve(
+  __dirname,
+  "../../../bidserver/src/main/resources/static"
+);
 
+console.log("distDir:", distDir); // 계산된 경로 확인
 module.exports = configure(function (/* ctx */) {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
@@ -42,6 +47,10 @@ module.exports = configure(function (/* ctx */) {
       target: {
         browser: ["es2019", "edge88", "firefox78", "chrome87", "safari13.1"],
         node: "node20",
+        distDir: path.resolve(
+          __dirname,
+          "../../../bidserver/src/main/resources/static"
+        ),
       },
 
       vueRouterMode: "hash", // available values: 'hash', 'history'
@@ -98,6 +107,7 @@ module.exports = configure(function (/* ctx */) {
 
       // Quasar plugins
       plugins: ["Dialog"],
+      plugins: ["Notify"],
     },
 
     // animations: 'all', // --- includes all animations

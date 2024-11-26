@@ -52,26 +52,28 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { useRouter } from "vue-router";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import {
-  setLocalSession,
-  fetchLocalSession,
-  fetchSessionUser,
-} from "../utils/sessionFunctions";
+import { setLocalSession, fetchLocalSession } from "../utils/sessionFunctions";
 import { navigate } from "../utils/navigate";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 const apiMap = {
-  U: "GET_ALL_APPROVED_MATCHES", // 일반 사용자
-  H: "GET_ALLMATCHES", // 총괄 관리자
-  M: "GET_MYMATCHES", // 대회 등록자
+  user: "GET_ALL_APPROVED_MATCHES", // 일반 사용자
+  admin: "GET_ALL_MATCHES", // 총괄 관리자
+  adminm: "GET_MYMATCHES", // 대회 등록자
 };
 const emit = defineEmits(["update-status"]);
 
-let sessionResults = {};
-let localSessionData = {};
+const localSessionData = fetchLocalSession([
+  "userClass",
+  "venueCd",
+  "telno",
+  "role",
+]);
+const token = localStorage.getItem("authToken");
 const router = useRouter();
 
 const matchArray = ref([]);
@@ -81,13 +83,17 @@ const message = ref("");
 
 // 서버에서 경기 목록을 가져오는 함수
 const fetchMatches = async () => {
-  const selectedApi = apiMap[sessionResults.userType];
+  const selectedApi = apiMap[localSessionData.userClass];
   try {
-    const response = await axios.get(APIs[selectedApi], {
+    const response = await axiosInstance.get(APIs[selectedApi], {
       params: {
-        telno: sessionResults.telno,
+        telno: localSessionData.telno, //대회등록자는 본인의 경기만
         venueCd: localSessionData.venueCd,
       },
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
     });
     matchArray.value = response.data.map((match) => ({
       ...match,
@@ -156,13 +162,7 @@ const handleError = (error) => {
 
 // 컴포넌트가 마운트될 때 실행
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["tableName", "userClass", "venueCd"]);
-  isAdmin.value = localSessionData.tableName === "admin";
-  sessionResults = await fetchSessionUser(localSessionData.userClass);
-  if (!sessionResults.success) {
-    resetLoginStatus();
-    handleBackToLogin();
-  }
+  isAdmin.value = localSessionData.userClass === "admin";
   await fetchMatches();
 });
 </script>

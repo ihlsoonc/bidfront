@@ -75,6 +75,8 @@
 
     <!-- 비밀번호 변경 입력 -->
     <div v-if="isValidUser || isValidTelno">
+      <!-- 숨겨진 필드로 newPassword에 자동 완성이 안돼도록 유도 -->
+      <input type="password" name="fakepassword" style="display: none" />
       <q-input
         v-model="newPassword"
         label="새 비밀번호 입력"
@@ -110,11 +112,13 @@
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 
-let localSessionData = {};
+const localSessionData = fetchLocalSession(["userClass"]);
+const token = localStorage.getItem("authToken");
 const route = useRoute();
 
 const activeTab = ref("");
@@ -143,7 +147,16 @@ const handleTelnoCheck = async () => {
     return false;
   }
   try {
-    const response = await axios.post(APIs.SEND_ONE_SMS, userData.value);
+    const response = await axiosInstance.post(
+      APIs.SEND_ONE_SMS,
+      userData.value,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200) {
       message.value =
@@ -172,7 +185,16 @@ const checkAuthNumber = () => {
 // 인증번호 비교
 const compareAuthNumber = async () => {
   try {
-    const response = await axios.post(APIs.VERIFY_CODE, userData.value);
+    const response = await axiosInstance.post(
+      APIs.VERIFY_CODE,
+      userData.value,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200) {
       message.value = response.data.message;
@@ -193,12 +215,20 @@ const handleValidateUser = async () => {
   }
 
   try {
-    const response = await axios.post(APIs.GET_USER_INFO_WITH_PASSWORD, {
-      query: id.value,
-      queryType: "telno",
-      password: currentPassword.value,
-      table: localSessionData.tableName,
-    });
+    const response = await axiosInstance.post(
+      APIs.GET_USER_WITH_PASSWORD,
+      {
+        query: id.value,
+        queryType: "telno",
+        password: currentPassword.value,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200) {
       isValidUser.value = true;
@@ -230,11 +260,19 @@ const changePassword = async () => {
 
   try {
     const paramId = isValidTelno.value ? userData.value.telno : id.value;
-    const response = await axios.post(APIs.CHANGE_USER_PASSWORD, {
-      telno: paramId,
-      password: newPassword.value,
-      table: localSessionData.tableName,
-    });
+    const response = await axiosInstance.post(
+      APIs.CHANGE_USER_PASSWORD,
+      {
+        telno: paramId,
+        password: newPassword.value,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
 
     if (response.status === 200) {
       message.value = "";
@@ -260,7 +298,6 @@ const handleError = (error) => {
 
 // 컴포넌트가 마운트될 때 실행
 onMounted(() => {
-  localSessionData = fetchLocalSession(["tableName", "userClass"]);
   const tabQuery = route.query.tab;
   activeTab.value = tabQuery === "2" ? "changePassword" : "resetPassword";
 });

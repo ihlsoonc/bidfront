@@ -10,7 +10,6 @@
       :totalWinAmount="totalWinAmount"
       :totalWinCount="totalWinCount"
       :totalBidAmount="totalBidAmount"
-      :isApproved="isApproved"
       @toggleHistory="toggleHistory"
       @paySubmit="handlePaySubmit"
       @selectVenue="handleSelectVenue"
@@ -48,28 +47,36 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { Dialog } from "quasar";
+
 import BidStatus from "./BidStatus.vue";
 import BidsList from "./BidsList.vue";
 import SeatMap from "./SeatMap.vue";
 import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
 import { navigate } from "../utils/navigate";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 const MAX_SELECTION = 5;
 const BID_OPEN = "O";
 
-let localSessionData = {};
-let sessionResults = {};
+let token = localStorage.getItem("authToken");
 let matchNumber = 0;
+const localSessionData = fetchLocalSession([
+  "userClass",
+  "userName",
+  "matchNumber",
+  "telno",
+]);
+
 let queryTelno = "";
+let paymentData = {};
 const router = useRouter();
 
 const isClosedBid = ref(false);
-const isApproved = ref(false);
 const selectedHistoryButton = ref(-1);
 const myBidsArray = ref([]);
 const allBidsArray = ref([]);
@@ -81,7 +88,7 @@ const totalBidAmount = ref(0);
 const totalWinAmount = ref(0);
 const totalWinCount = ref(0);
 const bidStatus = ref({});
-const paymentData = ref({});
+
 const message = ref("");
 const tableColumns = ref([
   {
@@ -105,7 +112,10 @@ const tableColumns = ref([
 
 const fetchBidStatus = async (matchNumber) => {
   try {
-    const response = await axios.get(APIs.GET_BIDSTATUS, {
+    const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
       params: { matchNumber: matchNumber },
       withCredentials: true,
     });
@@ -120,8 +130,11 @@ const fetchBidStatus = async (matchNumber) => {
 
 const fetchMyLast = async () => {
   try {
-    const response = await axios.get(APIs.GET_MY_LASTBIDS, {
-      params: { telno: sessionResults.telno, matchNumber: matchNumber },
+    const response = await axiosInstance.get(APIs.GET_MY_LASTBIDS, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      params: { telno: localSessionData.telno, matchNumber: matchNumber },
       withCredentials: true,
     });
     // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
@@ -162,8 +175,11 @@ const fetchMyLast = async () => {
 
 const fetchMyBids = async () => {
   try {
-    const response = await axios.get(APIs.GET_MY_BIDS, {
-      params: { telno: sessionResults.telno, matchNumber: matchNumber },
+    const response = await axiosInstance.get(APIs.GET_MY_BIDS, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      params: { telno: localSessionData.telno, matchNumber: matchNumber },
       withCredentials: true,
     });
 
@@ -201,7 +217,10 @@ const fetchMyBids = async () => {
 
 const fetchBidTallies = async () => {
   try {
-    const response = await axios.get(APIs.GET_BID_TALLIES, {
+    const response = await axiosInstance.get(APIs.GET_BID_TALLIES, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
       params: { matchNumber: matchNumber },
       withCredentials: true,
     });
@@ -249,11 +268,14 @@ const fetchSeatData = async (
 
     if (seatNoArray.length > 0) {
       // APIs 요청하여 좌석별 데이터를 가져옴
-      const response = await axios.post(
+      const response = await axiosInstance.post(
         APIs.GET_BIDS_BY_SEATARRAY,
-        { seatNoArray, matchNumber },
+        { seatNoArray, matchNumber }, // POST 요청 본문 (데이터)
         {
-          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+          },
+          withCredentials: true, // 쿠키를 포함한 자격 증명 전송
         }
       );
 
@@ -338,10 +360,10 @@ const handleSubmitBid = async (bidTotal) => {
 
 const submitBid = async () => {
   try {
-    const response = await axios.post(
-      APIs.SUBMIT_BID,
+    const response = await axiosInstance.post(
+      APIs.SUBMIT_BID, // API URL
       {
-        telno: sessionResults.telno,
+        telno: localSessionData.telno, // 요청 데이터
         matchNumber: matchNumber,
         bidArray: selectedSeats.value.map((seat) => ({
           matchNumber: seat.match_no,
@@ -350,7 +372,10 @@ const submitBid = async () => {
         })),
       },
       {
-        withCredentials: true,
+        headers: {
+          Authorization: `Bearer ${token}`, // 헤더에 토큰 추가
+        },
+        withCredentials: true, // 자격 증명 포함
       }
     );
 
@@ -429,29 +454,43 @@ const objectToQueryString = (obj) => {
     .join("&");
 };
 
-const handlePaySubmit = () => {
-  localStorage.setItem("telno", sessionResults.telno);
-  paymentData.value = {
-    ...paymentData.value,
-    telno: sessionResults.telno,
+const handlePaySubmit = async () => {
+  localStorage.setItem("telno", localSessionData.telno);
+  paymentData = {
+    matchNumber: matchNumber,
+    telno: localSessionData.telno,
     price: totalWinAmount.value,
     goodName: `좌석입찰 총 ${totalWinCount.value} 건`,
   };
 
   // 결제 데이터를 쿼리 스트링으로 변환
-  const queryString = objectToQueryString(paymentData.value);
+  const queryString = objectToQueryString(paymentData);
 
   // 리디렉션할 URL 생성
   const redirectUrl = `${
     isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START
   }?${queryString}`;
 
-  // 리디렉션 실행
   window.location.href = redirectUrl;
 };
 
+// try {
+//   const redirectUrl = isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START;
+
+//   // axios POST 요청
+//   const response = await axiosInstance.post(redirectUrl, paymentData, {
+//     headers: {
+//       "Content-Type": "application/json",
+//       Authorization: `Bearer ${token}`,
+//     },
+//     withCredentials: true,
+//   });
+// } catch (error) {
+//   handleError(error);
+// }
+
 function isMobile() {
-  return true;
+  return false;
   // return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
@@ -476,21 +515,6 @@ const resetLoginStatus = () => {
   emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
 };
 
-const restoreSession = async () => {
-  try {
-    const response = await axios.post(
-      APIs.RESTORE_SESSION,
-      {
-        telno: sessionResults.telno,
-        userName: localSessionData.userName,
-      },
-      { withCredentials: true }
-    );
-  } catch (error) {
-    console.error("세션 복구가 실패하였습니다.:", error);
-  }
-};
-
 watch(
   [clickCount],
   () => {
@@ -512,38 +536,16 @@ watch(
 const fetchData = async () => {
   try {
     await fetchBidStatus(matchNumber);
+
     await fetchMyLast();
+
     await fetchMyBids();
     await fetchBidTallies();
+    // alert("Bid tallies fetched."); // 입찰 집계 정보 가져오기 완료 알림
   } catch (error) {
+    console.error("An error occurred:", error); // 오류 발생 시 처리
+    alert(`An error occurred: ${error.message}`); // 오류 발생 알림
     handleError(error);
-  }
-};
-
-const fetchSessionUserNew = async () => {
-  try {
-    const response = await axios.get(APIs.GET_SESSION_USER, {
-      withCredentials: true,
-    });
-
-    sessionResults = response.data;
-
-    sessionStorage.setItem("userName", sessionResults.userName);
-    if (queryTelno) {
-      await fetchData();
-      handleBackToBids();
-    } else {
-      await fetchData();
-    }
-  } catch (error) {
-    message.value = error.response ? error.response.data : error.response;
-
-    if (queryTelno) {
-      await restoreSession(queryTelno, localSessionData.userName);
-      handleBackToBids();
-    } else {
-      handleBackToLogin();
-    }
   }
 };
 
@@ -556,11 +558,6 @@ const handleError = (error) => {
 };
 
 onMounted(async () => {
-  localSessionData = fetchLocalSession([
-    "matchNumber",
-    "userClass",
-    "userName",
-  ]);
   matchNumber = localSessionData.matchNumber;
   if (!matchNumber) {
     alert("경기를 먼저 선택해주세요.");
@@ -570,10 +567,10 @@ onMounted(async () => {
   const params = new URLSearchParams(queryString);
 
   if (params.has("telno")) {
+    //pgrequest에서 돌아온 경우
     queryTelno = params.get("telno");
-    console.log("returned from payment----------- telno :" + queryTelno.value);
   }
-  await fetchSessionUserNew();
+  fetchData();
 });
 </script>
 

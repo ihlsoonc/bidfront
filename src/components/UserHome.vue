@@ -15,11 +15,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeMount } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar } from "quasar";
-import axios from "axios";
-import { APIs } from "../utils/APIs";
 
 import NavBarUser from "./NavBarUser.vue";
 import { navigate } from "../utils/navigate";
@@ -29,9 +27,8 @@ import { setLocalSession } from "../utils/sessionFunctions";
 const $q = useQuasar();
 const router = useRouter();
 
-// userClass : navigation path, userTable : 조회시 사용자 테이블명
+// userClass : navigation path
 const userClass = "user";
-const userTable = "user";
 
 // 상태 관리 - 메뉴 버튼 활성화 관리 용
 const isLoggedIn = ref(false);
@@ -52,7 +49,8 @@ const confirmAndLogout = async () => {
   if (!isConfirmed) return;
 
   try {
-    await axios.post(APIs.USER_LOGOUT, {}, { withCredentials: true });
+    // authToken 삭제
+    localStorage.removeItem("authToken");
     resetLoginStatus();
   } catch (error) {
     alert("시스템 오류입니다.");
@@ -69,11 +67,13 @@ const handleNavigate = async (action) => {
   }
 };
 
-onMounted(() => {
+onBeforeMount(() => {
   setLocalSession(userClass, {
-    tableName: userTable,
-    userClass: userClass,
+    userClass: userClass, // routing path관리를 위한 사용자 클래스 설정
   });
+});
+
+onMounted(() => {
   navigate(router, userClass, "login");
 });
 </script>

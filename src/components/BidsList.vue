@@ -89,7 +89,7 @@
           color="white"
           text-color="blue-grey-14"
           @click="emitPaySubmit"
-          :disable="isApproved || totalWinAmount === 0"
+          :disable="totalWinAmount === 0"
           label="낙찰 내용 결제"
         />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <q-btn
@@ -114,7 +114,6 @@ const props = defineProps({
   totalWinAmount: Number,
   totalWinCount: Number,
   totalBidAmount: Number,
-  isApproved: Boolean,
 });
 
 const emit = defineEmits(["toggleHistory", "paySubmit", "selectVenue"]);

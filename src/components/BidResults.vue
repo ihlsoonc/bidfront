@@ -78,20 +78,22 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 
 import BidStatus from "./BidStatus.vue";
 import SeatMap from "./SeatMap.vue";
 import BidsListAdmin from "./BidsListAdmin.vue";
 import { APIs } from "../utils/APIs";
-import { messageCommon } from "../utils/messageCommon";
+
 import { navigate } from "../utils/navigate";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { showConfirmDialog } from "../utils/dialogUtils";
+import { messageCommon } from "../utils/messageCommon";
 
 // 라우터 설정 및 세션 변수
 const router = useRouter();
-let localSessionData = {};
-let sessionResults = {};
+const token = localStorage.getItem("authToken");
+const localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
 let matchNumber = 0;
 let biddedSeatCount = 0; // 입찰된 좌석 수
 
@@ -199,9 +201,19 @@ const handleAwardBid = async () => {
 
 const awardBid = async () => {
   try {
-    const response = await axios.post(APIs.AWARD_BID, {
-      matchNumber: matchNumber,
-    });
+    const response = await axiosInstance.post(
+      APIs.AWARD_BID,
+      {
+        matchNumber: matchNumber,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
+    );
+
     if (response.status === 200) {
       alert("성공적으로 낙찰 처리가 되었습니다.");
       message.value = response.data.message;
@@ -233,11 +245,17 @@ const handleSendAlimtalk = async () => {
 
 const sendAlimtalk = async () => {
   try {
-    await axios.post(
+    await axiosInstance.post(
       APIs.SEND_KAKAO_ALIMTALK,
       { matchNumber: matchNumber },
-      { withCredentials: true }
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      }
     );
+
     alert("알림톡이 전송되었습니다.");
     canSendAlimtalk.value = false;
   } catch (error) {
@@ -248,11 +266,13 @@ const sendAlimtalk = async () => {
 // 입찰 상태를 가져오는 함수
 const fetchBidStatus = async (matchNumber) => {
   try {
-    const response = await axios.get(
-      APIs.GET_BIDSTATUS,
-      { params: { matchNumber: matchNumber } },
-      { withCredentials: true }
-    );
+    const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
+      params: { matchNumber: matchNumber },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
+    });
 
     if (response.status === 200) {
       bidStatus.value = response.data;
@@ -265,10 +285,14 @@ const fetchBidStatus = async (matchNumber) => {
 //각 좌석별 최고 입찰내역
 const fetchHighestBids = async (matchNumber) => {
   try {
-    const response = await axios.get(APIs.GET_HIGHEST_BIDS, {
+    const response = await axiosInstance.get(APIs.GET_HIGHEST_BIDS, {
       params: { matchNumber: matchNumber },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       withCredentials: true,
     });
+
     // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
     bidsArray.value = response.data.map((seat) => {
       // 낙찰 여부에 따라 total_win_amount와 total_win_count를 업데이트
@@ -311,8 +335,11 @@ const fetchHighestBids = async (matchNumber) => {
 //전체 낙찰 내역
 const fetchBidsDetail = async (matchNumber) => {
   try {
-    const response = await axios.get(APIs.GET_ALL_BIDS, {
+    const response = await axiosInstance.get(APIs.GET_ALL_BIDS, {
       params: { matchNumber: matchNumber },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       withCredentials: true,
     });
 
@@ -352,11 +379,15 @@ const fetchBidsDetail = async (matchNumber) => {
 //좌석 box안의 입찰자수 최고 입찰액 표시
 const fetchBidsTallies = async () => {
   try {
-    const response = await axios.get(APIs.GET_BID_TALLIES, {
+    const response = await axiosInstance.get(APIs.GET_BID_TALLIES, {
       params: {
-        telno: sessionResults.telno,
+        telno: localSessionData.telno,
         matchNumber: matchNumber,
       },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      withCredentials: true,
     });
 
     allSeatBidArray.value = response.data.map((seat) => {
@@ -376,12 +407,22 @@ const fetchBidsTallies = async () => {
   }
 };
 
+// const toggleHistory = (seat) => {
+//   if (selectedHistoryButton.value === seat.seat_no) {
+//     seat.historyShow = false;
+//     selectedHistoryButton.value = -1;
+//   } else {
+//     selectedHistoryButton.value = Number(seat.seat_no);
+//     seat.historyShow = true;
+//   }
+// };
 const toggleHistory = (seat) => {
-  if (selectedHistoryButton.value === seat.seat_no) {
+  if (selectedHistoryButton.value === Number(seat.seat_no)) {
+    // 현재 선택된 좌석 번호와 동일한 경우 이력을 닫음
     seat.historyShow = false;
     selectedHistoryButton.value = -1;
   } else {
-    selectedHistoryButton.value = seat.seat_no;
+    selectedHistoryButton.value = Number(seat.seat_no);
     seat.historyShow = true;
   }
 };
@@ -419,11 +460,9 @@ const handleError = (error) => {
 
 // 세션 데이터 및 데이터 불러오기
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
   matchNumber = localSessionData.matchNumber;
   if (matchNumber) {
     try {
-      sessionResults = await fetchSessionUser(localSessionData.userClass);
       await fetchBidStatus(matchNumber);
       await fetchBidsTallies();
       setButtons();

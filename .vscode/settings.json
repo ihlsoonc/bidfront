@@ -3,13 +3,9 @@
   "editor.guides.bracketPairs": true,
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": [
-    "source.fixAll.eslint"
-  ],
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "typescript",
-    "vue"
-  ]
+  "editor.codeActionsOnSave": ["source.fixAll.eslint"],
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
+  // Lombok 관련 설정 추가
+  "java.jdt.ls.vmargs": "-javaagent:C:\\Users\\User\\.m2\\repository\\org\\projectlombok\\lombok\\1.18.28\\lombok-1.18.36.jar -Xbootclasspath/a:C:\\Users\\User\\.m2\\repository\\org\\projectlombok\\lombok\\1.18.36\\lombok-1.18.36.jar"
+  // "java.jdt.ls.vmargs": "-XX:+UseG1GC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx1G -Xms100m"
 }

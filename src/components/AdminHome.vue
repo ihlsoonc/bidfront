@@ -15,12 +15,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeMount } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar } from "quasar";
-import axios from "axios";
 
-import { APIs } from "../utils/APIs"; // API 엔드포인트 정의
 import NavBarAdmin from "./NavBarAdmin.vue"; // 네비게이션 바 컴포넌트
 import { navigate } from "../utils/navigate"; // 페이지 이동 유틸리티 함수
 import { setLocalSession } from "../utils/sessionFunctions"; // 세션 설정 유틸리티 함수
@@ -31,7 +29,6 @@ const $q = useQuasar();
 
 // 사용자 클래스 및 테이블명
 const userClass = "admin"; // 네비게이션 경로용 사용자 클래스
-const userTable = "admin"; // 조회시 사용자 테이블명
 
 // 상태 관리 변수 - 메뉴 버튼 활성화 여부
 const isLoggedIn = ref(false); // 로그인 상태 여부
@@ -55,7 +52,8 @@ const confirmAndLogout = async () => {
   if (!isConfirmed) return;
 
   try {
-    await axios.post(APIs.USER_LOGOUT, {}, { withCredentials: true }); // 로그아웃 API 호출
+    // authToken 삭제
+    localStorage.removeItem("authToken");
     resetLoginStatus(); // 로그인 상태 초기화
   } catch (error) {
     alert("시스템 오류입니다."); // 오류 메시지
@@ -73,13 +71,14 @@ const handleNavigate = async (action) => {
   }
 };
 
+onBeforeMount(() => {
+  setLocalSession(userClass, {
+    userClass: userClass, // routing path관리를 위한 사용자 클래스 설정
+  });
+});
+
 // 컴포넌트 마운트 시 실행
 onMounted(() => {
-  // 사용자 세션 설정
-  setLocalSession(userClass, {
-    tableName: userTable, // 사용자 테이블명 설정
-    userClass: userClass, // 사용자 클래스 설정
-  });
   handleNavigate("login"); // 로그인 페이지로 이동
 });
 </script>

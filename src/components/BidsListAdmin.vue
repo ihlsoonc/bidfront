@@ -97,8 +97,7 @@ const props = defineProps({
   totalWinCount: Number,
   totalBidAmount: Number,
 });
-
-const emit = defineEmits(["toggleHistory"]);
+const emit = defineEmits(["toggleHistory", "paySubmit", "selectVenue"]);
 
 // 날짜 및 시간 형식을 로컬 시간으로 포맷하는 함수
 const formatTimeToLocal = (time) => {
@@ -108,6 +107,7 @@ const formatTimeToLocal = (time) => {
 
 // 이력 토글 핸들러
 const toggleHistory = (seat) => {
+  // toggleHistory 이벤트를 부모 컴포넌트로 emit
   emit("toggleHistory", seat);
 };
 

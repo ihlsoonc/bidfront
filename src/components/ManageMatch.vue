@@ -169,6 +169,13 @@
             :disable="deleteConfirmMode"
             class="col-12 col-md-6"
           />
+          <q-input
+            v-model="matchData.payDue"
+            label="결제 시한"
+            type="datetime-local"
+            :disable="deleteConfirmMode"
+            class="col-12 col-md-6"
+          />
         </div>
         <div class="row q-col-gutter-md">
           <!-- q-input에서 input으로 수정함 q-input의 경우 오류발생 -->
@@ -212,16 +219,17 @@ import { ref, onMounted, computed } from "vue";
 
 import { useRouter } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import { fetchLocalSession, fetchSessionUser } from "../utils/sessionFunctions";
+import { fetchLocalSession } from "../utils/sessionFunctions";
 import { navigate } from "../utils/navigate";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 // Router 및 session 관련 변수
 const router = useRouter();
-let localSessionData = {};
-let sessionResults = {};
+const localSessionData = fetchLocalSession(["userClass", "venueCd"]);
+const token = localStorage.getItem("authToken");
 let newVenueCd = "";
 let newBidCd = "";
 let newFileSelected = false;
@@ -240,6 +248,7 @@ const matchData = ref({
   endTime: "",
   bidOpenTime: "",
   bidCloseTime: "",
+  payDue: "",
   isBidAvailable: "",
   file: null,
   fileName: "",
@@ -294,6 +303,7 @@ const columns = [
   { name: "bidLable", label: "입찰 허용 여부", field: "bidLable" },
   { name: "bid_open_time", label: "입찰 개시", field: "bid_open_time" },
   { name: "bid_close_time", label: "입찰 종료", field: "bid_close_time" },
+  { name: "pay_due_datetime", label: "결제 시한", field: "pay_due_datetime" },
   { name: "approveStatus", label: "상태", field: "approveStatus" },
   { name: "actions", label: "변경", align: "center" },
 ];
@@ -313,6 +323,14 @@ const handleBidAvaialableChange = (newValue) => {
 
 const handleFileChange = (event) => {
   const file = event.target.files ? event.target.files[0] : null;
+  // 유효성 검사: 영문자와 숫자만 허용
+  const isValidFileName = /^[a-zA-Z0-9]+$/.test(file.name.split(".")[0]);
+
+  if (!isValidFileName) {
+    alert("파일 이름은 영문자와 숫자만 허용됩니다.");
+    newFileSelected = false;
+    return; // 유효하지 않은 파일 이름은 처리하지 않음
+  }
   if (file) {
     newFileSelected = true;
     matchData.value.file = file;
@@ -322,12 +340,16 @@ const handleFileChange = (event) => {
 
 const fetchMatches = async () => {
   try {
-    const response = await axios.get(APIs.GET_ALLMATCHES, {
+    const response = await axiosInstance.get(APIs.GET_ALL_MATCHES, {
       params: {
-        telno: sessionResults.telno,
-        userType: sessionResults.userType,
+        telno: localSessionData.telno,
+        role: localSessionData.role,
         venueCd: localSessionData.venueCd,
       },
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
     });
 
     if (response.status === 200) {
@@ -340,7 +362,13 @@ const fetchMatches = async () => {
 
 const fetchVenues = async () => {
   try {
-    const response = await axios.get(APIs.GET_ALL_VENUES);
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
+    });
+
     if (response.status === 200) {
       venueArray.value = response.data;
     }
@@ -350,6 +378,7 @@ const fetchVenues = async () => {
 };
 
 const handleSubmit = async () => {
+  //삭제의 경우 validateInput을 수행하지 않음
   if (!deleteConfirmMode.value && !validateInput()) return;
 
   let venueCd;
@@ -369,11 +398,13 @@ const handleSubmit = async () => {
   if (newFileSelected) {
     const uniqueId = generateRandomNumber();
     matchData.value.fileName = uniqueId + "_" + matchData.value.fileName;
+  } else {
+    fileMessage.value = "업로드 할 파일이 없습니다.";
   }
   const requestData = {
     ...matchData.value,
-    telno: sessionResults.telno,
-    userType: sessionResults.userType,
+    telno: localSessionData.telno,
+    role: localSessionData.role,
     venueCd: localSessionData.venueCd,
     isBidAvailable: bidCd,
   };
@@ -402,7 +433,12 @@ const handleSubmit = async () => {
   const apiUrl = apiMapping[currentMode];
   try {
     // API 요청 시도
-    const response = await axios.post(apiUrl, requestData);
+    const response = await axiosInstance.post(apiUrl, requestData, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
+    });
 
     // 응답 성공 확인
     if (response.status === 200) {
@@ -435,10 +471,12 @@ const handleFileUpload = async () => {
 
   try {
     // 서버로 파일 업로드
-    const response = await axios.post(APIs.UPLOAD_MATCHINFO, formData, {
+    const response = await axiosInstance.post(APIs.UPLOAD_MATCHINFO, formData, {
       headers: {
         "Content-Type": "multipart/form-data", // 파일 업로드에 적합한 헤더 설정
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
       },
+      withCredentials: true, // 쿠키 사용을 위한 설정
     });
 
     if (response.status === 200) {
@@ -455,10 +493,15 @@ const downloadFile = async (fileName) => {
     return;
   }
   try {
-    const response = await axios.get(APIs.DOWNLOAD_MATCHINFO, {
+    const response = await axiosInstance.get(APIs.DOWNLOAD_MATCHINFO, {
       params: { fileName },
-      responseType: "blob",
+      responseType: "blob", // 파일 데이터(이진 데이터) 응답
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
     });
+
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -527,6 +570,7 @@ const setNewMatchData = (match) => {
     isBidAvailable: match.is_bid_available,
     bidLable: match.is_bid_available === "Y" ? "입찰가능" : "입찰불가능",
     fileName: match.filename_attached,
+    payDue: match.pay_due_datetime,
   };
 };
 
@@ -540,6 +584,7 @@ const validateInput = () => {
     bidOpenTime,
     bidCloseTime,
     isBidAvailable,
+    payDue,
   } = matchData.value;
 
   // bidOpenTime과 bidCloseTime을 먼저 Date 객체로 변환
@@ -594,6 +639,11 @@ const validateInput = () => {
   //   return false;
   // }
 
+  // if (!endTime) {
+  //   alert("결제 시한을 입력해 주세요.");
+  //   return false;
+  // }
+
   return true;
 };
 
@@ -630,8 +680,6 @@ const resetMessage = () => {
 
 // Lifecycle hooks
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["userClass", "venueCd"]);
-  sessionResults = await fetchSessionUser(localSessionData.userClass);
   await fetchVenues();
   await fetchMatches();
 });

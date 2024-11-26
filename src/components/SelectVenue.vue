@@ -25,7 +25,8 @@
             <q-card-section>
               <div class="text-h6">{{ venue.venue_name }}</div>
             </q-card-section>
-            <q-img
+            <!-- q-img사용시 이미지가 안떠  img tag사용 -->
+            <img
               :src="getImageUrl(venue.venue_img_file)"
               :alt="venue.venue_name"
               class="venue-image"
@@ -43,26 +44,31 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import axiosInstance from "../utils/axiosInterceptor";
 import { navigate } from "../utils/navigate";
-import {
-  setLocalSession,
-  fetchLocalSession,
-  fetchSessionUser,
-} from "../utils/sessionFunctions";
+import { setLocalSession, fetchLocalSession } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 // 상태 및 라우터 정의
 const router = useRouter();
+const localSessionData = fetchLocalSession(["userClass"]);
+const token = localStorage.getItem("authToken");
 const venueArray = ref([]);
 const selectedVenueCd = ref("");
 const selectedVenueIndex = ref(null);
 const message = ref("");
+const emit = defineEmits(["update-status"]);
 
 // 서버에서 경기장 데이터를 가져오는 함수
 const fetchVenues = async () => {
   try {
-    const response = await axios.get(APIs.GET_ALL_VENUES);
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
+      },
+      withCredentials: true, // 쿠키 사용을 위한 설정
+    });
     venueArray.value = response.data;
   } catch (error) {
     handleError(error);
@@ -71,7 +77,10 @@ const fetchVenues = async () => {
 
 // 이미지 URL 생성 함수
 const getImageUrl = (fileName) => {
-  return new URL(`/images/venues/${fileName}`, import.meta.url).href;
+  const url = new URL(`../assets/images/venues/${fileName}`, import.meta.url)
+    .href;
+  console.log(`FileName: ${fileName}, URL: ${url}`); // 파일 이름과 URL 출력
+  return url;
 };
 
 // 경기장 선택 처리
@@ -100,32 +109,17 @@ const handleError = (error) => {
     : messageCommon.ERR_ETC;
 };
 
-// 로그인 상태 초기화 및 로그인 화면으로 이동
-const handleBackToLogin = () => {
-  navigate(router, localSessionData.userClass, "login");
-};
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-};
-
 // 컴포넌트가 마운트될 때 실행
-let localSessionData = {};
 onMounted(async () => {
-  localSessionData = fetchLocalSession(["tableName", "userClass"]);
-  const sessionResults = await fetchSessionUser(localSessionData.userClass);
-  if (!sessionResults.success) {
-    resetLoginStatus();
-    handleBackToLogin();
-  }
   fetchVenues();
 });
 </script>
 
 <style scoped>
 .venue-image {
-  max-width: 100%;
+  display: block;
+  width: 100%;
   height: auto;
-  margin-top: 2px;
 }
 
 h6 {
