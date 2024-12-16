@@ -118,7 +118,9 @@ const handleSubmit = async () => {
 
     const requiredRole = sessionContext;
     const roleInDB = response.data.role;
-    console.log(`현재  권한이 . ` + requiredRole + " " + roleInDB);
+    console.log(
+      `현재  권한이==================== . ` + requiredRole + " " + roleInDB
+    );
     if (requiredRole === "user" || requiredRole === roleInDB) {
       // 응답에서 토큰 추출, 추출시에는 소문자로 추출함
       const newAccess = response.headers["authorization"]?.replace(

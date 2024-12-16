@@ -104,6 +104,7 @@ import { navigate } from "../utils/navigate";
 // 상수 및 세션 관련 변수 선언
 let sessionConext = getSessionContext();
 // 입력 및 상태 관련 ref 선언
+const router = useRouter();
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
 const password = ref(""); // 비밀번호
 const updateMode = ref(false);
@@ -115,29 +116,28 @@ const message = ref(""); // 상태 메시지
 
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
+  const requiredRole = sessionConext;
+  let roleInDB = "";
   try {
     const response = await axiosInstance.post(APIs.GET_USER_WITH_PASSWORD, {
       query: searchQuery.value,
       password: password.value,
       queryType: "telno",
     });
-    const requiredRole = sessionConext;
-    const roleInDB = response.data.role;
-    console.log(
-      `현재  권한이==================== . ` + requiredRole + " " + roleInDB
-    );
+
+    roleInDB = response.data.role;
     if (requiredRole !== roleInDB) {
       alert("현재 시스템에 권한이 없습니다.");
       navigate(router, sessionConext, "login");
     }
     if (response.status === 200 && response.data) {
-      userData.value = response.data; // 조회된 사용자 정보 저장
+      userData.value = response.data;
       passwordMsg.value = "";
-      message.value = "사용자 정보가 조회되었습니다.";
       updateMode.value = true;
     }
   } catch (error) {
     handleError(error);
+    return;
   }
 };
 
