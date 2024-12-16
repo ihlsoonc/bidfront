@@ -132,11 +132,10 @@ import axios from "axios";
 import qs from "qs";
 import axiosInstance from "../utils/axiosInterceptor";
 import { ref } from "vue";
-import { fetchLocalSession } from "../utils/sessionFunctions";
+import { getSessionContext } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-
-const localSessionData = fetchLocalSession(["userClass"]);
+const sessionConext = getSessionContext();
 
 // 사용자 데이터 초기화
 const userData = ref({
@@ -279,7 +278,7 @@ const handleSubmit = async () => {
   }
   if (!validateInput()) return;
 
-  userData.value.role = localSessionData.userClass;
+  userData.value.role = sessionConext;
   try {
     const response = await axiosInstance.post(
       APIs.REGISTER_USER,
@@ -290,7 +289,6 @@ const handleSubmit = async () => {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        withCredentials: true, // 쿠키와 함께 요청
       }
     );
     if (response.status === 200) {

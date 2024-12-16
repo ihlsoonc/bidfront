@@ -43,17 +43,20 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { navigate } from "../utils/navigate";
-import { setLocalSession, fetchLocalSession } from "../utils/sessionFunctions";
+import {
+  getSessionContext,
+  saveSessionData,
+  removeSessionData,
+} from "../utils/sessionFunctions";
+import { Dialog } from "quasar";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 // 상태 및 라우터 정의
 const router = useRouter();
-const localSessionData = fetchLocalSession(["userClass"]);
-const token = localStorage.getItem("authToken");
+const sessionContext = getSessionContext();
 const venueArray = ref([]);
 const selectedVenueCd = ref("");
 const selectedVenueIndex = ref(null);
@@ -63,12 +66,7 @@ const emit = defineEmits(["update-status"]);
 // 서버에서 경기장 데이터를 가져오는 함수
 const fetchVenues = async () => {
   try {
-    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
-      withCredentials: true, // 쿠키 사용을 위한 설정
-    });
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES);
     venueArray.value = response.data;
   } catch (error) {
     handleError(error);
@@ -79,7 +77,6 @@ const fetchVenues = async () => {
 const getImageUrl = (fileName) => {
   const url = new URL(`../assets/images/venues/${fileName}`, import.meta.url)
     .href;
-  console.log(`FileName: ${fileName}, URL: ${url}`); // 파일 이름과 URL 출력
   return url;
 };
 
@@ -87,10 +84,10 @@ const getImageUrl = (fileName) => {
 const handleSelectVenue = (index) => {
   const venue = venueArray.value[index];
   selectedVenueCd.value = venue.venue_cd;
-  setLocalSession(localSessionData.userClass, {
+  saveSessionData(sessionContext, {
     venueCd: selectedVenueCd.value,
   });
-  navigate(router, localSessionData.userClass, "selectMatch");
+  navigate(router, sessionContext, "selectMatch");
 };
 
 // 선택된 경기장 데이터
@@ -100,13 +97,28 @@ const selectedVenue = computed(() => {
     : null;
 });
 
-// 오류 처리 함수
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 // 컴포넌트가 마운트될 때 실행

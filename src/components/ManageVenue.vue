@@ -14,42 +14,19 @@
 
         <div v-else>
           <h5>경기장 정보</h5>
-          <q-table
-            :rows="venueArray"
-            :columns="columns"
-            row-key="venue_cd"
-            flat
-            dense
-          >
-            <template v-slot:body-cell-actions="props">
-              <q-td align="center">
-                <q-btn
-                  @click="handleUpdate(props.row)"
-                  push
-                  color="white"
-                  text-color="blue-grey-14"
-                  label="수정"
-                  :disable="
-                    updateInputMode || deleteConfirmMode || insertInputMode
-                  "
-                />
-                <q-btn
-                  @click="handleDelete(props.row)"
-                  push
-                  color="white"
-                  text-color="deep-orange-14"
-                  label="삭제"
-                  :disable="
-                    updateInputMode || deleteConfirmMode || insertInputMode
-                  "
-                />
-              </q-td>
-            </template>
-          </q-table>
+          <!-- ag-grid-vue 테이블 -->
+          <ag-grid-vue
+            class="ag-theme-alpine"
+            :rowData="venueArray"
+            :columnDefs="columnDefs"
+            :gridOptions="gridOptions"
+            style="width: 100%; height: 350px"
+            @cellClicked="onCellClicked"
+          ></ag-grid-vue>
         </div>
 
         <q-btn
-          v-if="!(updateInputMode || deleteConfirmMode || insertInputMode)"
+          v-if="!(updateMode || deleteMode || insertMode)"
           @click="handleInsert"
           label="신규 경기장 추가"
           class="q-mt-md"
@@ -62,34 +39,31 @@
         guideMessage
       }}</q-banner>
     </q-card>
-    <div
-      v-if="insertInputMode || updateInputMode || deleteConfirmMode"
-      class="q-pa-md"
-    >
+    <div v-if="insertMode || updateMode || deleteMode" class="q-pa-md">
       <q-form @submit.prevent="handleSubmit">
         <q-input
           v-model="venueData.venueCd"
           label="코드"
-          :disable="updateInputMode || deleteConfirmMode"
+          :disable="updateMode || deleteMode"
           maxlength="3"
           class="q-mb-md"
         />
         <q-input
           v-model="venueData.venueName"
           label="경기장 이름"
-          :disable="deleteConfirmMode"
+          :disable="deleteMode"
           class="q-mb-md"
         />
         <q-input
           v-model="venueData.venuePlaceInfo"
           label="경기장 위치 정보"
-          :disable="deleteConfirmMode"
+          :disable="deleteMode"
           class="q-mb-md"
         />
         <q-input
           v-model="venueData.venueGeneralInfo"
           label="경기장 일반 정보"
-          :disable="deleteConfirmMode"
+          :disable="deleteMode"
           class="q-mb-md"
         />
       </q-form>
@@ -110,7 +84,6 @@
         @click="handleSubmitCancel"
       />
     </div>
-
     <q-banner v-if="message" type="info" class="q-mt-md">{{
       message
     }}</q-banner>
@@ -120,16 +93,18 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import { AgGridVue } from "ag-grid-vue3";
+import "ag-grid-community/styles/ag-grid.css"; // ag-grid 기본 스타일
+import "ag-grid-community/styles/ag-theme-alpine.css"; // ag-grid 테마
 import axiosInstance from "../utils/axiosInterceptor";
-import { fetchLocalSession } from "../utils/sessionFunctions";
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
+import { navigate } from "../utils/navigate";
 
-const localSessionData = fetchLocalSession(["userClass"]);
-const token = localStorage.getItem("authToken");
 const router = useRouter();
-
+const sessionContext = getSessionContext();
+const localSessionData = fetchSessionData(sessionContext, ["telno"]);
 const venueArray = ref([]);
 const venueData = ref({
   venueCd: "",
@@ -137,44 +112,104 @@ const venueData = ref({
   venuePlaceInfo: "",
   venueGeneralInfo: "",
 });
-const insertInputMode = ref(false);
-const updateInputMode = ref(false);
-const deleteConfirmMode = ref(false);
+const insertMode = ref(false);
+const updateMode = ref(false);
+const deleteMode = ref(false);
 const message = ref("");
 
-const columns = [
-  { name: "venue_cd", label: "경기장 코드", field: "venue_cd" },
-  { name: "venue_name", label: "경기장 명", field: "venue_name" },
-  {
-    name: "venue_place_info",
-    label: "위치 정보",
-    field: "venue_place_info",
-  },
-  {
-    name: "venue_general_info",
-    label: "일반 정보",
-    field: "venue_general_info",
-  },
-  { name: "actions", label: "변경", align: "center" },
-];
-
 const guideMessage = computed(() => {
-  if (insertInputMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
-  if (updateInputMode.value)
-    return "경기 정보를 수정한 후 확인버튼을 클릭하세요.";
-  if (deleteConfirmMode.value)
-    return "삭제할 정보가 맞으면 확인버튼을 클릭하세요.";
+  if (insertMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
+  if (updateMode.value) return "경기 정보를 수정한 후 확인버튼을 클릭하세요.";
+  if (deleteMode.value) return "삭제할 정보가 맞으면 확인버튼을 클릭하세요.";
   return "";
 });
 
+// ag-grid columnDefs
+const columnDefs = [
+  { headerName: "경기장 코드", field: "venue_cd", flex: 1 },
+  { headerName: "경기장 명", field: "venue_name", flex: 1 },
+  {
+    headerName: "위치 정보",
+    field: "venue_place_info",
+    flex: 2,
+    sortable: false,
+  },
+  {
+    headerName: "일반 정보",
+    field: "venue_general_info",
+    flex: 2,
+    sortable: false,
+  },
+  {
+    headerName: "수정",
+    field: "edit",
+    cellRenderer: (params) =>
+      `<button class="btn-edit" data-id="${params.data.venue_cd}">수정</button>`,
+    flex: 1,
+    sortable: false,
+  },
+  {
+    headerName: "삭제",
+    field: "delete",
+    cellRenderer: (params) =>
+      `<button class="btn-delete" data-id="${params.data.venue_cd}">삭제</button>`,
+    flex: 1,
+    sortable: false,
+  },
+];
+
+// ag-grid 옵션
+const gridOptions = {
+  defaultColDef: {
+    resizable: true, // 열 크기 조정 가능
+    // 기본 정렬 활성화
+  },
+  autoSizeStrategy: {
+    type: "fitGridWidth",
+  },
+
+  pagination: true,
+  paginationPageSizeSelector: [10, 20, 30],
+  rowHeight: 40,
+};
+
+// 버튼 클릭 이벤트 처리
+const onCellClicked = (params) => {
+  const target = params.event.target;
+  const venueCd = target.getAttribute("data-id");
+
+  // 삽입 모드에서는 삭제와 수정 버튼 클릭 무시
+  if (
+    insertMode.value &&
+    (target.classList.contains("btn-edit") ||
+      target.classList.contains("btn-delete"))
+  ) {
+    return;
+  }
+
+  // 수정 모드에서는 삭제 버튼 클릭 무시
+  if (updateMode.value && target.classList.contains("btn-delete")) {
+    return;
+  }
+
+  // 삭제 모드에서는 수정 버튼 클릭 무시
+  if (deleteMode.value && target.classList.contains("btn-edit")) {
+    return;
+  }
+
+  if (target.classList.contains("btn-edit")) {
+    const selectedVenue = venueArray.value.find((v) => v.venue_cd === venueCd);
+    handleUpdate(selectedVenue);
+  } else if (target.classList.contains("btn-delete")) {
+    const selectedVenue = venueArray.value.find((v) => v.venue_cd === venueCd);
+    handleDelete(selectedVenue);
+  }
+};
+
+// 데이터 가져오기
 const fetchVenues = async () => {
   try {
-    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      withCredentials: true,
-    });
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {});
     if (response.status === 200) {
       venueArray.value = response.data;
     }
@@ -183,35 +218,41 @@ const fetchVenues = async () => {
   }
 };
 
-const handleSubmit = async () => {
-  const requestData = {
-    ...venueData.value,
-  };
-  if (!deleteConfirmMode.value && !validateInput()) return;
+// 상태 관리
+const handleInsert = () => {
+  resetForm();
+  resetState();
+  insertMode.value = true;
+};
 
-  let response;
+const handleUpdate = (venue) => {
+  setNewVenueData(venue);
+  resetState();
+  updateMode.value = true;
+};
+
+const handleDelete = (venue) => {
+  setNewVenueData(venue);
+  resetState();
+  deleteMode.value = true;
+};
+
+const handleSubmit = async () => {
+  const requestData = { ...venueData.value };
+  if (!deleteMode.value && !validateInput()) return;
+
   try {
-    if (insertInputMode.value) {
-      response = await axiosInstance.post(APIs.ADD_VENUE, venueData.value, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      });
-    } else if (updateInputMode.value) {
-      response = await axiosInstance.post(APIs.UPDATE_VENUE, venueData.value, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      });
-    } else if (deleteConfirmMode.value) {
-      response = await axiosInstance.post(APIs.DELETE_VENUE, requestData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      });
+    let response;
+    if (insertMode.value) {
+      response = await axiosInstance.post(APIs.ADD_VENUE, venueData.value, {});
+    } else if (updateMode.value) {
+      response = await axiosInstance.post(
+        APIs.UPDATE_VENUE,
+        venueData.value,
+        {}
+      );
+    } else if (deleteMode.value) {
+      response = await axiosInstance.post(APIs.DELETE_VENUE, requestData, {});
     }
 
     if (response.status === 200) {
@@ -227,38 +268,9 @@ const handleSubmit = async () => {
 
 const handleSubmitCancel = () => {
   resetState();
-  message.value = "작업이 취소되었습니다.";
 };
 
-const handleInsert = () => {
-  resetForm();
-  resetState();
-  resetMessage();
-  insertInputMode.value = true;
-};
-
-const handleUpdate = (props) => {
-  setNewVenueData(props);
-  resetState();
-  resetMessage();
-  updateInputMode.value = true;
-};
-
-const handleDelete = (props) => {
-  setNewVenueData(props);
-  resetState();
-  resetMessage();
-  deleteConfirmMode.value = true;
-};
-
-const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
-};
-
+// 데이터 설정
 const setNewVenueData = (venue) => {
   venueData.value = {
     venueCd: venue.venue_cd,
@@ -269,9 +281,7 @@ const setNewVenueData = (venue) => {
 };
 
 const validateInput = () => {
-  const { venueCd, venueName, venuePlaceInfo, venueGeneralInfo } =
-    venueData.value;
-
+  const { venueName } = venueData.value;
   if (!venueName) {
     alert("경기장명을 입력해 주세요.");
     return false;
@@ -280,9 +290,9 @@ const validateInput = () => {
 };
 
 const resetState = () => {
-  insertInputMode.value = false;
-  updateInputMode.value = false;
-  deleteConfirmMode.value = false;
+  insertMode.value = false;
+  updateMode.value = false;
+  deleteMode.value = false;
 };
 
 const resetForm = () => {
@@ -292,20 +302,61 @@ const resetForm = () => {
     venuePlaceInfo: "",
     venueGeneralInfo: "",
   };
-};
-
-const resetMessage = () => {
   message.value = "";
 };
-const handleBackToLogin = () => {
-  navigate(router, localSessionData.userClass, "login");
+
+const handleError = (error) => {
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-};
-onMounted(async () => {
-  await fetchVenues();
+
+onMounted(() => {
+  fetchVenues();
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.btn-edit,
+.btn-delete {
+  margin: 2px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-edit {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-delete {
+  background-color: #ff6f61;
+  color: white;
+}
+
+.btn-edit:hover,
+.btn-delete:hover {
+  opacity: 0.8;
+}
+</style>

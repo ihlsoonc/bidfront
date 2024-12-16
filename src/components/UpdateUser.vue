@@ -94,21 +94,19 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import axios from "axios";
+import { useRouter } from "vue-router";
 import axiosInstance from "../utils/axiosInterceptor";
-import { fetchLocalSession } from "../utils/sessionFunctions";
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
+import { navigate } from "../utils/navigate";
 
 // 상수 및 세션 관련 변수 선언
-const localSessionData = fetchLocalSession(["userClass"]);
-const token = localStorage.getItem("authToken");
-
+let sessionConext = getSessionContext();
 // 입력 및 상태 관련 ref 선언
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
 const password = ref(""); // 비밀번호
 const updateMode = ref(false);
-const isAdmin = ref(false);
 const isValidEmail = ref(false);
 const isExistingEmail = ref(false);
 const userData = ref(null); // 조회된 사용자 정보
@@ -118,21 +116,20 @@ const message = ref(""); // 상태 메시지
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
   try {
-    const response = await axiosInstance.post(
-      APIs.GET_USER_WITH_PASSWORD,
-      {
-        query: searchQuery.value,
-        password: password.value,
-        queryType: "telno",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
+    const response = await axiosInstance.post(APIs.GET_USER_WITH_PASSWORD, {
+      query: searchQuery.value,
+      password: password.value,
+      queryType: "telno",
+    });
+    const requiredRole = sessionConext;
+    const roleInDB = response.data.role;
+    console.log(
+      `현재  권한이==================== . ` + requiredRole + " " + roleInDB
     );
-
+    if (requiredRole !== roleInDB) {
+      alert("현재 시스템에 권한이 없습니다.");
+      navigate(router, sessionConext, "login");
+    }
     if (response.status === 200 && response.data) {
       userData.value = response.data; // 조회된 사용자 정보 저장
       passwordMsg.value = "";
@@ -149,18 +146,9 @@ const handleUpdate = async () => {
   if (!validateInput(userData)) return;
 
   try {
-    const response = await axiosInstance.post(
-      APIs.UPDATE_USER,
-      {
-        ...userData.value,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.UPDATE_USER, {
+      ...userData.value,
+    });
 
     if (response.status === 200) {
       message.value = "사용자 정보가 성공적으로 수정되었습니다.";
@@ -258,12 +246,29 @@ const validateInput = (userData) => {
 };
 
 // 에러 처리 함수
+
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 // 초기화 함수
@@ -273,7 +278,7 @@ const handleReset = () => {
 };
 
 const handleBackToLogin = () => {
-  navigate(router, localSessionData.userClass, "login");
+  navigate(router, sessionConext, "login");
 };
 
 const resetLoginStatus = () => {
@@ -282,7 +287,6 @@ const resetLoginStatus = () => {
 
 // onMounted에서 테이블 이름 설정
 onMounted(async () => {
-  isAdmin.value = localSessionData.userClass === "admin";
   passwordMsg.value = "사용자 정보 수정을 위해 비밀번호를 입력해주세요.";
 });
 </script>

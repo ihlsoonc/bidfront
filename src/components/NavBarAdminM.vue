@@ -10,7 +10,11 @@
         @click="toggleDrawer"
         v-if="$q.screen.lt.md"
       />
-      <q-toolbar-title>입찰 시스템 대회 등록</q-toolbar-title>
+      <q-toolbar-title>
+        입찰 시스템 대회 등록
+        <!-- 로그인된 경우 사용자 이름 표시 -->
+        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+      </q-toolbar-title>
 
       <!-- 데스크탑용 버튼들 -->
       <q-btn
@@ -26,8 +30,8 @@
         flat
         round
         dense
-        label="대회관리"
-        @click="handleClickAction('manageMatch')"
+        label="대회 등록"
+        @click="handleClickAction('registerMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -35,7 +39,7 @@
         flat
         round
         dense
-        label="사용자정보수정"
+        label="사용자 정보 수정"
         @click="handleClickAction('updateUser')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
@@ -75,21 +79,21 @@
       <q-item
         clickable
         v-ripple
-        @click="handleClickAction('manageMatch')"
+        @click="handleClickAction('updateUser')"
         :class="{ disabled: !isLoggedIn }"
       >
-        <q-item-section>대회관리</q-item-section>
+        <q-item-section>사용자 정보 수정</q-item-section>
       </q-item>
       <q-item
         clickable
         v-ripple
-        @click="handleClickAction('updateUser')"
+        @click="handleClickAction('registerMatch')"
         :class="{ disabled: !isLoggedIn }"
       >
-        <q-item-section>사용자정보수정</q-item-section>
+        <q-item-section>대회 등록</q-item-section>
       </q-item>
       <q-item clickable v-ripple @click="handleClickAction('login')">
-        <q-item-section>로그인</q-item-section>
+        <q-icon name="home" />홈
       </q-item>
       <q-item
         clickable
@@ -109,17 +113,19 @@ import { ref, toRefs, onMounted } from "vue";
 const props = defineProps({
   isLoggedIn: {
     type: Boolean,
-    default: false,
+    required: true,
   },
   hasSelectedMatch: {
     type: Boolean,
     default: false,
   },
+  username: {
+    type: String,
+    default: null, // 기본값 설정
+  },
 });
 
 const emit = defineEmits(["link-action"]);
-const { isLoggedIn } = toRefs(props);
-const { hasSelectedMatch } = toRefs(props);
 const leftDrawerOpen = ref(false);
 
 const handleClickAction = (action) => {

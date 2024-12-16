@@ -1,27 +1,22 @@
 <template>
-  <div>
-    <br />
-    <p>입찰내용이 있는 좌석은 윤곽선으로 표시됨.</p>
-    <br />
-    <div class="seat-grid">
-      <q-btn
-        v-for="seatNumber in 40"
-        :key="seatNumber"
-        :label="`${seatNumber}번\n${getSeatInfo(seatNumber).highestBid}원\n${
-          getSeatInfo(seatNumber).bidCount
-        }명`"
-        :class="{
-          selected: isSelected(seatNumber),
-          bidded: hasBidders(seatNumber),
-          selectedbidded: isSelected(seatNumber) && hasBidders(seatNumber),
-        }"
-        @click="handleSeatClick(seatNumber)"
-        flat
-        color="primary"
-        text-color="black"
-        class="seat-box"
-      />
-    </div>
+  <div class="seat-grid">
+    <q-btn
+      v-for="seatNumber in 40"
+      :key="seatNumber"
+      :label="`${seatNumber}번\n${getSeatInfo(seatNumber).highestBid}원\n${
+        getSeatInfo(seatNumber).bidCount
+      }명`"
+      :class="{
+        selected: isSelected(seatNumber),
+        bidded: hasBidders(seatNumber),
+        selectedbidded: isSelected(seatNumber) && hasBidders(seatNumber),
+      }"
+      @click="handleSeatClick(seatNumber)"
+      flat
+      color="primary"
+      text-color="black"
+      class="seat-box"
+    />
   </div>
 </template>
 

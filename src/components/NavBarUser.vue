@@ -10,7 +10,11 @@
         @click="toggleDrawer"
         v-if="$q.screen.lt.md"
       />
-      <q-toolbar-title>입찰 등록 및 결제 시스템</q-toolbar-title>
+      <q-toolbar-title>
+        입찰 등록 및 결제 시스템
+        <!-- 로그인된 경우 사용자 이름 표시 -->
+        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+      </q-toolbar-title>
 
       <!-- 데스크탑에서만 버튼 표시 -->
       <q-btn
@@ -77,12 +81,7 @@
         <q-item-section>사용자 정보 수정</q-item-section>
       </q-item>
 
-      <q-item
-        clickable
-        v-ripple
-        @click="handleClickAction('login')"
-        :disable="isLoggedIn"
-      >
+      <q-item clickable v-ripple @click="handleClickAction('login')">
         <q-icon name="home" />홈
       </q-item>
 
@@ -108,12 +107,14 @@ const props = defineProps({
   },
   hasSelectedMatch: {
     type: Boolean,
-    required: true,
+    default: false,
+  },
+  username: {
+    type: String,
+    default: null, // 기본값 설정
   },
 });
 const emit = defineEmits(["link-action"]);
-const { isLoggedIn } = toRefs(props);
-const { hasSelectedMatch } = toRefs(props);
 const leftDrawerOpen = ref(false);
 
 const handleClickAction = (action) => {

@@ -4,9 +4,12 @@
     <NavBarUser
       :isLoggedIn="isLoggedIn"
       :hasSelectedMatch="hasSelectedMatch"
+      :username="username"
       @link-action="handleNavigate"
     />
-
+    <q-card-section v-if="message">
+      <q-banner type="warning">{{ message }}</q-banner>
+    </q-card-section>
     <!-- 페이지 컨테이너 -->
     <q-page-container>
       <router-view @update-status="handleUpdateStatus" />
@@ -18,19 +21,29 @@
 import { ref, onMounted, onBeforeMount } from "vue";
 import { useRouter } from "vue-router";
 import { useQuasar } from "quasar";
-
+import { Dialog } from "quasar";
+import qs from "qs";
+import { APIs } from "../utils/APIs";
+import axios from "axios"; //로그아웃에서는 토큰 유효성 검사 및 재발급이 필요없으므로 axiosInterceptor를 사용하지 않음
 import NavBarUser from "./NavBarUser.vue";
 import { navigate } from "../utils/navigate";
-import { setLocalSession } from "../utils/sessionFunctions";
+import {
+  clearSessionByContext,
+  fetchSessionData,
+  saveSessionContext,
+} from "../utils/sessionFunctions";
+import { messageCommon } from "../utils/messageCommon";
 
 // Quasar와 Vue Router 사용
 const $q = useQuasar();
 const router = useRouter();
 
-// userClass : navigation path
-const userClass = "user";
+// sessionContext : navigation path & localStorate prefix
+const sessionContext = "user";
 
 // 상태 관리 - 메뉴 버튼 활성화 관리 용
+const message = ref("");
+const username = ref(fetchSessionData(sessionContext, ["username"]).username);
 const isLoggedIn = ref(false);
 const hasSelectedMatch = ref(false);
 
@@ -42,20 +55,34 @@ const handleUpdateStatus = (status) => {
 const resetLoginStatus = () => {
   isLoggedIn.value = false;
   hasSelectedMatch.value = false;
+  username.value = "";
 };
 
 const confirmAndLogout = async () => {
-  const isConfirmed = window.confirm("로그아웃하시겠습니까");
+  const isConfirmed = window.confirm("로그아웃하시겠습니까?");
   if (!isConfirmed) return;
 
   try {
-    // authToken 삭제
-    localStorage.removeItem("authToken");
+    const response = await axios.post(
+      APIs.LOGOUT, // 로그아웃 API 경로
+      qs.stringify({
+        username: "", // Spring Security용 사용자 이름 (전화번호)
+        password: "", // Spring Security용 비밀번호 (빈 값으로 전달)
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded", // 요청 데이터 형식 지정
+        },
+        withCredentials: true, // 쿠키와 함께 요청 전송
+      }
+    );
+
+    clearSessionByContext(sessionContext);
     resetLoginStatus();
   } catch (error) {
-    alert("시스템 오류입니다.");
+    handleError(error);
   } finally {
-    navigate(router, userClass, "login");
+    handleNavigate("login");
   }
 };
 
@@ -63,18 +90,24 @@ const handleNavigate = async (action) => {
   if (action === "logout") {
     await confirmAndLogout();
   } else {
-    navigate(router, userClass, action);
+    navigate(router, sessionContext, action);
   }
 };
 
+const handleError = (error) => {
+  message.value = error.response
+    ? error.response.data
+    : error.request
+    ? messageCommon.ERR_NETWORK
+    : messageCommon.ERR_ETC;
+};
+
 onBeforeMount(() => {
-  setLocalSession(userClass, {
-    userClass: userClass, // routing path관리를 위한 사용자 클래스 설정
-  });
+  saveSessionContext(sessionContext);
 });
 
 onMounted(() => {
-  navigate(router, userClass, "login");
+  handleNavigate("login"); // 로그인 페이지로 이동
 });
 </script>
 

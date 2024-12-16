@@ -46,7 +46,6 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { Dialog } from "quasar";
 
@@ -56,18 +55,17 @@ import SeatMap from "./SeatMap.vue";
 import SelectedSeatsDetails from "./SelectedSeatsDetails.vue";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
 import { navigate } from "../utils/navigate";
-import { fetchLocalSession } from "../utils/sessionFunctions";
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
 const MAX_SELECTION = 5;
-const BID_OPEN = "O";
+const BID_OPEN = "입찰 진행중";
 
-let token = localStorage.getItem("authToken");
 let matchNumber = 0;
-const localSessionData = fetchLocalSession([
-  "userClass",
-  "userName",
+const sessionContext = getSessionContext();
+const localSessionData = fetchSessionData(sessionContext, [
+  "username",
   "matchNumber",
   "telno",
 ]);
@@ -82,7 +80,7 @@ const myBidsArray = ref([]);
 const allBidsArray = ref([]);
 const selectedSeats = ref([]);
 
-const clickCount = ref(0);
+// const clickCount = ref(0);
 const bidAmounts = ref({});
 const totalBidAmount = ref(0);
 const totalWinAmount = ref(0);
@@ -113,14 +111,10 @@ const tableColumns = ref([
 const fetchBidStatus = async (matchNumber) => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
       params: { matchNumber: matchNumber },
-      withCredentials: true,
     });
     bidStatus.value = response.data;
-    if (response.data.bidStatusCode !== BID_OPEN) {
+    if (response.data.bid_status_name !== BID_OPEN) {
       isClosedBid.value = true;
     }
   } catch (error) {
@@ -131,11 +125,7 @@ const fetchBidStatus = async (matchNumber) => {
 const fetchMyLast = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_MY_LASTBIDS, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
       params: { telno: localSessionData.telno, matchNumber: matchNumber },
-      withCredentials: true,
     });
     // 낙찰된 총 금액과 낙찰된 항목의 수를 계산할 변수
     myBidsArray.value = response.data.map((seat) => {
@@ -176,11 +166,7 @@ const fetchMyLast = async () => {
 const fetchMyBids = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_MY_BIDS, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
       params: { telno: localSessionData.telno, matchNumber: matchNumber },
-      withCredentials: true,
     });
 
     // 서버에서 받아온 데이터를 bidsArray에 매핑 또는 업데이트
@@ -210,7 +196,6 @@ const fetchMyBids = async () => {
       }
     });
   } catch (error) {
-    console.error("에러 발생:", error); // 에러가 발생한 경우 로그 출력
     handleError(error);
   }
 };
@@ -218,11 +203,7 @@ const fetchMyBids = async () => {
 const fetchBidTallies = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_TALLIES, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
       params: { matchNumber: matchNumber },
-      withCredentials: true,
     });
 
     // 서버에서 좌석별 입찰자 수와 최고 입찰 금액을 포함하여 데이터를 가져옴
@@ -239,7 +220,7 @@ const fetchBidTallies = async () => {
   }
 };
 
-const handleSeatClick = (index) => {
+const handleSeatClick2 = (index) => {
   selectedSeats.value = selectedSeats.value.some(
     (seat) => seat.uniqueSeatId === index
   )
@@ -247,10 +228,55 @@ const handleSeatClick = (index) => {
     : [...selectedSeats.value, { seat_no: index, uniqueSeatId: index }];
 
   if (selectedSeats.value.length > MAX_SELECTION) {
-    alert(`최대 ${MAX_SELECTION}개의 좌석만 선택할 수 있습니다.`);
+    Dialog.create({
+      title: "오류",
+      message: `최대 ${MAX_SELECTION}개의 좌석만 선택할 수 있습니다.`,
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
     selectedSeats.value = selectedSeats.value.slice(0, MAX_SELECTION);
   }
   clickCount.value += 1;
+};
+
+const handleSeatClick = (index) => {
+  selectedSeats.value = selectedSeats.value.some(
+    (seat) => seat.uniqueSeatId === index
+  )
+    ? selectedSeats.value.filter((seat) => seat.uniqueSeatId !== index) // 이미 선택된 좌석이면 해당 좌석을 리스트에서 제거
+    : [...selectedSeats.value, { seat_no: index, uniqueSeatId: index }]; // 선택되지 않은 좌석이면 리스트에 추가
+
+  // 선택한 좌석의 수 확인
+  if (selectedSeats.value.length > MAX_SELECTION) {
+    Dialog.create({
+      title: "오류",
+      message: `최대 ${MAX_SELECTION}개의 좌석만 선택할 수 있습니다.`,
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    // 초과된 좌석을 제거하고 최대 개수까지만 유지
+    selectedSeats.value = selectedSeats.value.slice(0, MAX_SELECTION);
+  }
+
+  // 선택된 좌석이 있을 때만 데이터를 새로 가져옴 (입찰 중인 경우 데이터가 계속변함)
+  if (selectedSeats.value.length > 0) {
+    fetchSeatData(
+      matchNumber,
+      selectedSeats.value,
+      (data) => {
+        selectedSeats.value = data;
+      },
+      (msg) => {
+        message.value = msg;
+      }
+    );
+  }
 };
 
 const fetchSeatData = async (
@@ -268,16 +294,10 @@ const fetchSeatData = async (
 
     if (seatNoArray.length > 0) {
       // APIs 요청하여 좌석별 데이터를 가져옴
-      const response = await axiosInstance.post(
-        APIs.GET_BIDS_BY_SEATARRAY,
-        { seatNoArray, matchNumber }, // POST 요청 본문 (데이터)
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-          },
-          withCredentials: true, // 쿠키를 포함한 자격 증명 전송
-        }
-      );
+      const response = await axiosInstance.post(APIs.GET_BIDS_BY_SEATARRAY, {
+        seatNoArray,
+        matchNumber,
+      });
 
       const fetchedData = response.data;
 
@@ -298,7 +318,6 @@ const fetchSeatData = async (
         current_bid_amount:
           fetchedDataMap[seat.seat_no]?.current_bid_amount ?? 0, // undefined일 때 0을 기본값으로
       }));
-      console.log(updatedSeatsWithData);
       // 좌석 데이터 업데이트
       setSelectedSeats(updatedSeatsWithData);
     }
@@ -328,7 +347,15 @@ const handleSubmitBid = async (bidTotal) => {
   // 유효하지 않은 입찰이 있으면 경고 메시지를 표시하고 중단
   if (invalidSeats.length > 0) {
     const seatNumbers = invalidSeats.map((seat) => seat.seat_no).join(", ");
-    alert(`좌석 ${seatNumbers}의 입찰 금액이 현재 입찰 최저가보다 작습니다.`);
+    Dialog.create({
+      title: "오류",
+      message: `좌석 ${seatNumbers}의 입찰 금액을 확인하세요. \n 현재 최고 입찰 금액과 좌석 가격보다 커야 합니다..`,
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
     return;
   }
 
@@ -353,7 +380,15 @@ const handleSubmitBid = async (bidTotal) => {
       submitBid();
     })
     .onCancel(() => {
-      alert("제출이 취소되었습니다.");
+      Dialog.create({
+        title: "작업 취소",
+        message: `제출이 취소되었습니다.`,
+        ok: {
+          label: "확인",
+          color: "primary",
+        },
+        persistent: true,
+      });
       return;
     });
 };
@@ -370,12 +405,6 @@ const submitBid = async () => {
           seatNo: seat.seat_no,
           bidAmount: bidAmounts.value[seat.uniqueSeatId] || 0,
         })),
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`, // 헤더에 토큰 추가
-        },
-        withCredentials: true, // 자격 증명 포함
       }
     );
 
@@ -395,7 +424,15 @@ const submitBid = async () => {
 
     if (response.status === 200) {
       // 응답 상태가 200일 경우
-      alert("성공적으로 입찰이 등록되었습니다.");
+      Dialog.create({
+        title: "알림",
+        message: `성공적으로 입찰이 등록되었습니다.`,
+        ok: {
+          label: "확인",
+          color: "primary",
+        },
+        persistent: true,
+      });
       message.value = response.data.message;
       fetchMyLast(); // 나의 입찰 데이터 다시 불러오기
       fetchMyBids(); // 나의 입찰 데이터 다시 불러오기
@@ -455,39 +492,31 @@ const objectToQueryString = (obj) => {
 };
 
 const handlePaySubmit = async () => {
-  localStorage.setItem("telno", localSessionData.telno);
-  paymentData = {
-    matchNumber: matchNumber,
-    telno: localSessionData.telno,
-    price: totalWinAmount.value,
-    goodName: `좌석입찰 총 ${totalWinCount.value} 건`,
-  };
+  //현재 화면에서 logout한 경우를 체크
+  const sessionContext = getSessionContext();
+  const newSessionData = fetchSessionData(sessionContext, ["telno"]);
+  if (newSessionData.telno == null) {
+    alert("세션이 종료되었습니다.  다시 로그인해주세요.");
+    handleBackToLogin();
+  } else {
+    paymentData = {
+      matchNumber: matchNumber,
+      telno: localSessionData.telno,
+      price: totalWinAmount.value,
+      goodName: `좌석입찰 총 ${totalWinCount.value} 건`,
+    };
 
-  // 결제 데이터를 쿼리 스트링으로 변환
-  const queryString = objectToQueryString(paymentData);
+    // 결제 데이터를 쿼리 스트링으로 변환
+    const queryString = objectToQueryString(paymentData);
 
-  // 리디렉션할 URL 생성
-  const redirectUrl = `${
-    isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START
-  }?${queryString}`;
+    // 리디렉션할 URL 생성
+    const redirectUrl = `${
+      isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START
+    }?${queryString}`;
 
-  window.location.href = redirectUrl;
+    window.location.href = redirectUrl;
+  }
 };
-
-// try {
-//   const redirectUrl = isMobile() ? APIs.PG_START_MOBILE : APIs.PG_START;
-
-//   // axios POST 요청
-//   const response = await axiosInstance.post(redirectUrl, paymentData, {
-//     headers: {
-//       "Content-Type": "application/json",
-//       Authorization: `Bearer ${token}`,
-//     },
-//     withCredentials: true,
-//   });
-// } catch (error) {
-//   handleError(error);
-// }
 
 function isMobile() {
   return false;
@@ -495,44 +524,41 @@ function isMobile() {
 }
 
 const handleSelectVenue = () => {
-  navigate(router, localSessionData.userClass, "selectVenue");
+  navigate(router, sessionContext, "selectVenue");
 };
 
 const handleBackToLogin = () => {
-  navigate(router, localSessionData.userClass, "login");
+  navigate(router, sessionContext, "login");
 };
 
 const handleBackToBids = () => {
-  navigate(router, localSessionData.userClass, "bids");
+  navigate(router, sessionContext, "bids");
 };
 
 const handleBackToSelect = () => {
   alert("경기를 선택해주세요.");
-  navigate(router, localSessionData.userClass, "selectVenue");
+  navigate(router, sessionContext, "selectVenue");
 };
 
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-};
+// watch(
+//   [clickCount],
+//   () => {
+//     if (selectedSeats.value.length > 0) {
+//       fetchSeatData(
+//         matchNumber,
+//         selectedSeats.value,
+//         (data) => {
+//           selectedSeats.value = data;
+//         },
+//         (msg) => {
+//           message.value = msg;
+//         }
+//       );
+//     }
+//   },
+//   { deep: true }
+// );
 
-watch(
-  [clickCount],
-  () => {
-    if (selectedSeats.value.length > 0) {
-      fetchSeatData(
-        matchNumber,
-        selectedSeats.value,
-        (data) => {
-          selectedSeats.value = data;
-        },
-        (msg) => {
-          message.value = msg;
-        }
-      );
-    }
-  },
-  { deep: true }
-);
 const fetchData = async () => {
   try {
     await fetchBidStatus(matchNumber);
@@ -541,23 +567,39 @@ const fetchData = async () => {
 
     await fetchMyBids();
     await fetchBidTallies();
-    // alert("Bid tallies fetched."); // 입찰 집계 정보 가져오기 완료 알림
   } catch (error) {
-    console.error("An error occurred:", error); // 오류 발생 시 처리
-    alert(`An error occurred: ${error.message}`); // 오류 발생 알림
     handleError(error);
   }
 };
 
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 onMounted(async () => {
+  if (!localSessionData || !localSessionData.telno) {
+    alert("사용자 정보가 없습니다.  다시 로그인해주세요.");
+  }
   matchNumber = localSessionData.matchNumber;
   if (!matchNumber) {
     alert("경기를 먼저 선택해주세요.");
@@ -569,8 +611,12 @@ onMounted(async () => {
   if (params.has("telno")) {
     //pgrequest에서 돌아온 경우
     queryTelno = params.get("telno");
+    alert("결제요청 후 돌아옴.");
+    fetchData();
+    // handleBackToBids();
+  } else {
+    fetchData();
   }
-  fetchData();
 });
 </script>
 

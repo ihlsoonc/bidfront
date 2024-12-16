@@ -38,6 +38,14 @@ body {
     align-items: center;
   }
 
+  .rowflex-container {
+    display: flex;
+    justify-content: flex-start;
+    padding: 20px 0; /* 간격을 좁게 설정 */
+    align-items: center;
+    gap: 30px;
+  }
+
   .input-box {
     width: 500px;
     padding: 5px;
@@ -121,7 +129,7 @@ h6 {
 
 .q-btn:disabled {
   color: rgb(219, 184, 152) !important;
-  opacity: 1 !important;
+  opacity: 0.5 !important;
   background-color: inherit !important;
   cursor: not-allowed;
 }

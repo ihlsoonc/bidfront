@@ -14,10 +14,14 @@
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",
+    "ag-grid-community": "^32.3.3",
+    "ag-grid-enterprise": "^32.3.3",
+    "ag-grid-vue3": "^32.3.3",
     "axios": "^1.7.7",
-    "quasar": "^2.16.0",
+    "quasar": "^2.17.4",
     "uuid": "^11.0.3",
     "vue": "^3.4.18",
+    "vue-cookies": "^1.8.4",
     "vue-router": "^4.0.12"
   },
   "devDependencies": {

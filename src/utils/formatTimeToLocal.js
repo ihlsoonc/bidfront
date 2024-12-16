@@ -1,3 +1,12 @@
+/**
+ * formatTimeToLocal
+ * - SQL 날짜 및 시간을 "ko-KR" 로컬 시간대로 변환하여 12시간 형식으로 출력
+ * - 날짜와 시간이 없을 경우 빈 문자열 반환
+ *
+ * @param {string} sqlDatetime - SQL 형식의 날짜 및 시간 문자열
+ * @returns {string} - 변환된 로컬 시간 문자열 (예: "2024.12.14 오전 10:30:15")
+ */
+
 export const formatTimeToLocal = (sqlDatetime) => {
   if (!sqlDatetime) {
     return "";

@@ -115,10 +115,9 @@ import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
-import { fetchLocalSession } from "../utils/sessionFunctions";
-
-const localSessionData = fetchLocalSession(["userClass"]);
-const token = localStorage.getItem("authToken");
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
+const sessionConext = getSessionContext();
+const localSessionData = fetchSessionData(sessionConext, ["telno"]);
 const route = useRoute();
 
 const activeTab = ref("");
@@ -149,18 +148,11 @@ const handleTelnoCheck = async () => {
   try {
     const response = await axiosInstance.post(
       APIs.SEND_ONE_SMS,
-      userData.value,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
+      userData.value
     );
 
     if (response.status === 200) {
-      message.value =
-        response.data.message + "code: " + response.data.verificationCode;
+      message.value = response.data.message;
       codeInputMode.value = true;
     }
   } catch (error) {
@@ -185,16 +177,7 @@ const checkAuthNumber = () => {
 // 인증번호 비교
 const compareAuthNumber = async () => {
   try {
-    const response = await axiosInstance.post(
-      APIs.VERIFY_CODE,
-      userData.value,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.VERIFY_CODE, userData.value);
 
     if (response.status === 200) {
       message.value = response.data.message;
@@ -215,20 +198,11 @@ const handleValidateUser = async () => {
   }
 
   try {
-    const response = await axiosInstance.post(
-      APIs.GET_USER_WITH_PASSWORD,
-      {
-        query: id.value,
-        queryType: "telno",
-        password: currentPassword.value,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.GET_USER_WITH_PASSWORD, {
+      query: id.value,
+      queryType: "telno",
+      password: currentPassword.value,
+    });
 
     if (response.status === 200) {
       isValidUser.value = true;
@@ -260,19 +234,10 @@ const changePassword = async () => {
 
   try {
     const paramId = isValidTelno.value ? userData.value.telno : id.value;
-    const response = await axiosInstance.post(
-      APIs.CHANGE_USER_PASSWORD,
-      {
-        telno: paramId,
-        password: newPassword.value,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.CHANGE_USER_PASSWORD, {
+      telno: paramId,
+      password: newPassword.value,
+    });
 
     if (response.status === 200) {
       message.value = "";
@@ -288,12 +253,29 @@ const changePassword = async () => {
 };
 
 // 에러 처리
+
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 // 컴포넌트가 마운트될 때 실행

@@ -39,7 +39,7 @@ const routes = [
       {
         name: "selectMatchUser",
         path: "selectmatchuser",
-        component: () => import("components/SelectMatch.vue"),
+        component: () => import("components/SelectMatchUser.vue"),
       },
     ],
   },
@@ -77,7 +77,7 @@ const routes = [
       {
         name: "selectMatchAdmin",
         path: "selectmatchadmin",
-        component: () => import("components/SelectMatch.vue"),
+        component: () => import("src/components/SelectMatchAdmin.vue"),
       }, // 경기 선택
       {
         name: "bidResultsAdmin",
@@ -85,14 +85,15 @@ const routes = [
         component: () => import("components/BidResults.vue"),
       }, // 입찰 결과
       {
-        name: "manageMatchAdmin",
-        path: "managematchadmin",
-        component: () => import("components/ManageMatch.vue"),
-      }, // 경기 관리
+        name: "reserveMatchAdmin",
+        path: "reservematchadmin",
+        component: () => import("components/ReserveMatchAdmin.vue"),
+      }, // 일괄 입찰 승인
+
       {
         name: "approveMatchAdmin",
         path: "approvematchadmin",
-        component: () => import("components/ApproveMatch.vue"),
+        component: () => import("src/components/ApproveMatchOld.vue"),
       }, // 경기 승인
       {
         name: "manageVenueAdmin",
@@ -103,6 +104,11 @@ const routes = [
         name: "updateSeatPriceAdmin",
         path: "updateseatpriceadmin",
         component: () => import("components/UpdateSeatPrice.vue"),
+      }, // 좌석 가격 수정
+      {
+        name: "approveReserveMatch",
+        path: "approvereservematch",
+        component: () => import("components/ApproveReserveMatch.vue"),
       }, // 좌석 가격 수정
     ],
   },
@@ -140,13 +146,26 @@ const routes = [
       {
         name: "selectMatchAdminM",
         path: "selectmatchadminm",
-        component: () => import("components/SelectMatch.vue"),
+        component: () => import("src/components/SelectMatchAdmin.vue"),
       }, // 경기 선택
       {
-        name: "manageMatchAdminM",
-        path: "managematchadminm",
-        component: () => import("components/ManageMatch.vue"),
+        name: "registerMatch",
+        path: "registermatch",
+        component: () => import("components/RegisterMatch.vue"),
+        props: (route) => ({
+          key: route.fullPath, // fullPath를 key로 사용 (경기정보 수정화면에서 경기 등록버튼을 눌렀을때 Mount를 수행하기 위함 -화면 reset등 필요한 작업 수행행)
+        }),
+      }, // 경기 선택
+      {
+        name: "updateMatch",
+        path: "updatematch",
+        component: () => import("components/RegisterMatch.vue"),
       }, // 경기 관리
+      {
+        name: "reserveMatch",
+        path: "reserveMatch",
+        component: () => import("src/components/ReserveMatch.vue"),
+      }, // 좌석 가격 수정
     ],
   },
 

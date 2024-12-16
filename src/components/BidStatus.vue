@@ -16,7 +16,7 @@
           <q-item-section>
             <q-item-label>
               <span class="bold-text">
-                {{ matchRound }} {{ openStatus }} (경기번호
+                {{ matchRound }} {{ bidStatus.bid_status_name }} (경기번호
                 {{ bidStatus.match_no }})</span
               >
             </q-item-label>
@@ -30,14 +30,13 @@
         </q-item>
 
         <!-- 입찰 기간 -->
-        <q-item>
+        <q-item v-if="bidStatus.is_bid_available == 'Y'">
           <q-item-section>
             <q-item-label
               >입찰 기간 {{ formatTimeToLocal(bidStatus.bid_open_datetime) }} ~
-              {{
-                formatTimeToLocal(bidStatus.bid_close_datetime)
-              }}</q-item-label
-            >
+              {{ formatTimeToLocal(bidStatus.bid_close_datetime) }}&nbsp;&nbsp;
+              결제 시한 {{ formatTimeToLocal(bidStatus.pay_due_datetime) }}
+            </q-item-label>
           </q-item-section>
         </q-item>
       </div>
@@ -55,23 +54,6 @@ const props = defineProps({
     type: Object,
     default: () => null,
   },
-});
-
-// 입찰 상태 표시 (N: 입찰 미개시, O: 입찰 가능, C: 입찰 종료, F: 낙찰 종료)
-const openStatus = computed(() => {
-  if (!props.bidStatus) return "확인 중...";
-  switch (props.bidStatus.bidStatusCode) {
-    case "N":
-      return "입찰 미개시";
-    case "O":
-      return "입찰 가능";
-    case "C":
-      return "입찰 종료";
-    case "F":
-      return "낙찰 종료";
-    default:
-      return "상태 미확인";
-  }
 });
 
 // 경기 정보 표시 (경기명, 라운드, 장소)

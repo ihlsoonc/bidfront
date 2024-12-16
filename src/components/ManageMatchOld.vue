@@ -1,66 +1,26 @@
 <template>
   <q-page class="common-container">
     <q-card v-if="!matchArray || matchArray.length === 0">
-      <br />
-      <br />
-      <br />
+      <br /><br /><br />
       <q-banner>현재 대회 정보가 없습니다.</q-banner>
-      <br />
-      <br />
-      <br />
+      <br /><br /><br />
     </q-card>
 
     <div v-else>
       <h5 class="text-center">경기 정보</h5>
-      <q-table
-        :rows="computedMatchArray"
-        :columns="columns"
-        row-key="match_no"
-        flat
-        dense
-        :rows-per-page="20"
-      >
-        <template v-slot:body-cell-actions="props">
-          <q-td>
-            <q-btn
-              label="첨부 다운로드"
-              color="secondary"
-              :disable="!props.row.filename_attached"
-              icon="download"
-              @click="downloadFile(props.row.filename_attached)"
-              flat
-            />
-            <div v-if="props.row.approved !== APPROVED_MATCH">
-              <q-btn
-                @click="handleUpdate(props.row)"
-                push
-                color="white"
-                text-color="blue-grey-14"
-                label="수정"
-                :disable="
-                  updateInputMode || deleteConfirmMode || insertInputMode
-                "
-              />
-
-              <q-btn
-                @click="handleDelete(props.row)"
-                push
-                color="white"
-                text-color="deep-orange-14"
-                label="삭제"
-                :disable="
-                  updateInputMode || deleteConfirmMode || insertInputMode
-                "
-              />
-            </div>
-          </q-td>
-        </template>
-      </q-table>
+      <ag-grid-vue
+        class="ag-theme-alpine"
+        :rowData="computedMatchArray"
+        :columnDefs="columnDefs"
+        :gridOptions="gridOptions"
+        style="width: 100%; height: 500px"
+        @cellClicked="onCellClicked"
+      ></ag-grid-vue>
     </div>
 
     <div class="row q-mt-md q-col-gutter-md">
       <q-btn
-        v-if="!(updateInputMode || deleteConfirmMode || insertInputMode)"
+        v-if="!(updateMode || deleteMode || insertMode)"
         @click="handleInsert"
         label="경기 추가"
         class="q-mt-md"
@@ -72,10 +32,12 @@
         guideMessage
       }}</q-banner>
     </q-card>
-    <div
-      v-if="insertInputMode || updateInputMode || deleteConfirmMode"
-      class="q-mt-md"
-    >
+
+    <!-- 기타 작업 상태 관리 및 메시지 -->
+    <q-banner v-if="message" type="info">{{ message }}</q-banner>
+    <q-banner v-if="fileMessage" type="info">{{ fileMessage }}</q-banner>
+
+    <div v-if="insertMode || updateMode || deleteMode" class="q-mt-md">
       <q-form @submit.prevent="handleSubmit">
         <div class="row q-col-gutter-md">
           <q-input
@@ -90,7 +52,7 @@
               <q-select
                 v-model="matchData.venueName"
                 :options="venueOptions"
-                :disable="deleteConfirmMode"
+                :disable="deleteMode"
                 class="col-12 col-md-6"
                 @update:model-value="handleVenueChange"
               />
@@ -101,7 +63,7 @@
                 v-model="matchData.bidLable"
                 :options="bidOptions"
                 class="col-12 col-md-6"
-                :disable="deleteConfirmMode"
+                :disable="deleteMode"
                 @update:model-value="handleBidAvaialableChange"
               />
             </div>
@@ -119,7 +81,7 @@
           <q-input
             v-model="matchData.matchName"
             label="경기명"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -127,14 +89,14 @@
           <q-input
             v-model="matchData.round"
             label="라운드"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
           <q-input
             v-model="matchData.startDate"
             label="경기 일자"
             type="date"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -143,14 +105,14 @@
             v-model="matchData.startTime"
             label="시작 시간"
             type="time"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
           <q-input
             v-model="matchData.endTime"
             label="종료 시간"
             type="time"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -159,21 +121,21 @@
             v-model="matchData.bidOpenTime"
             label="입찰 개시"
             type="datetime-local"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
           <q-input
             v-model="matchData.bidCloseTime"
             label="입찰 종료"
             type="datetime-local"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
           <q-input
             v-model="matchData.payDue"
             label="결제 시한"
             type="datetime-local"
-            :disable="deleteConfirmMode"
+            :disable="deleteMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -182,7 +144,7 @@
           <input
             type="file"
             @change="handleFileChange"
-            :disabled="deleteConfirmMode"
+            :disabled="deleteMode"
             class="col-12 col-md-6"
           />
         </div>
@@ -197,7 +159,7 @@
           @click="handleSubmit"
           type="submit"
           label="확인"
-          :disable="!insertInputMode && !updateInputMode && !deleteConfirmMode"
+          :disable="!insertMode && !updateMode && !deleteMode"
         />
         <q-btn
           push
@@ -209,27 +171,26 @@
         />
       </div>
     </div>
-    <q-banner v-if="message" type="info">{{ message }}</q-banner>
-    <q-banner v-if="fileMessage" type="info">{{ fileMessage }}</q-banner>
   </q-page>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from "vue";
-
 import { useRouter } from "vue-router";
-import axios from "axios";
+import { AgGridVue } from "ag-grid-vue3"; // ag-grid-vue3 추가
+import "ag-grid-community/styles/ag-grid.css"; // ag-grid 기본 스타일
+import "ag-grid-community/styles/ag-theme-alpine.css"; // ag-grid 테마
 import axiosInstance from "../utils/axiosInterceptor";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
-import { fetchLocalSession } from "../utils/sessionFunctions";
-import { navigate } from "../utils/navigate";
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
+import { navigate } from "../utils/navigate";
 
 // Router 및 session 관련 변수
 const router = useRouter();
-const localSessionData = fetchLocalSession(["userClass", "venueCd"]);
-const token = localStorage.getItem("authToken");
+const sessionContext = getSessionContext();
+const localSessionData = fetchSessionData(sessionContext, ["venueCd", "telno"]);
 let newVenueCd = "";
 let newBidCd = "";
 let newFileSelected = false;
@@ -254,20 +215,18 @@ const matchData = ref({
   fileName: "",
 });
 
-const insertInputMode = ref(false);
-const updateInputMode = ref(false);
-const deleteConfirmMode = ref(false);
+const insertMode = ref(false);
+const updateMode = ref(false);
+const deleteMode = ref(false);
 const message = ref("");
 const fileMessage = ref("");
-
-// 컴퓨티드 프로퍼티, 컬럼 등
-const APPROVED_MATCH = "Y";
 
 const computedMatchArray = computed(() => {
   return matchArray.value.map((match) => ({
     ...match,
     bid_open_time: formatTimeToLocal(match.bid_open_datetime),
     bid_close_time: formatTimeToLocal(match.bid_close_datetime),
+    pay_due_datetime: formatTimeToLocal(match.pay_due_datetime),
     approveStatus: match.approved === "Y" ? "승인" : "미승인", // 승인 상태 필드
     bidLable: match.is_bid_available === "Y" ? "입찰가능" : "입찰불가능",
   }));
@@ -283,30 +242,117 @@ const bidOptions = computed(() => [
 ]);
 
 const guideMessage = computed(() => {
-  if (insertInputMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
-  if (updateInputMode.value)
-    return "경기 정보를 수정한 후 확인버튼을 클릭하세요.";
-  if (deleteConfirmMode.value)
-    return "삭제할 정보가 맞으면 확인버튼을 클릭하세요.";
+  if (insertMode.value) return "정보 입력 후 확인버튼을 클릭하세요.";
+  if (updateMode.value) return "경기 정보를 수정한 후 확인버튼을 클릭하세요.";
+  if (deleteMode.value) return "삭제할 정보가 맞으면 확인버튼을 클릭하세요.";
   return "";
 });
 
-// 테이블 컬럼 정의
-const columns = [
-  { name: "match_no", label: "경기번호", field: "match_no" },
-  { name: "venue_name", label: "경기장", field: "venue_name" },
-  { name: "match_name", label: "경기명", field: "match_name" },
-  { name: "round", label: "라운드", field: "round" },
-  { name: "start_date", label: "경기 일자", field: "start_date" },
-  { name: "start_time", label: "시작 시간", field: "start_time" },
-  { name: "end_time", label: "종료 시간", field: "end_time" },
-  { name: "bidLable", label: "입찰 허용 여부", field: "bidLable" },
-  { name: "bid_open_time", label: "입찰 개시", field: "bid_open_time" },
-  { name: "bid_close_time", label: "입찰 종료", field: "bid_close_time" },
-  { name: "pay_due_datetime", label: "결제 시한", field: "pay_due_datetime" },
-  { name: "approveStatus", label: "상태", field: "approveStatus" },
-  { name: "actions", label: "변경", align: "center" },
+// ag-grid columnDefs
+const columnDefs = [
+  { headerName: "번호", field: "match_no", flex: 1 },
+  { headerName: "경기장", field: "venue_name", flex: 1 },
+  { headerName: "경기명", field: "match_name", flex: 1 },
+  { headerName: "라운드", field: "round", flex: 1 },
+  {
+    headerName: "경기 일자",
+    field: "start_date",
+    sortable: true,
+  },
+  { headerName: "시작 시간", field: "start_time", flex: 1 },
+  { headerName: "종료 시간", field: "end_time", flex: 1 },
+  { headerName: "입찰 허용 여부", field: "bidLable", flex: 1 },
+  { headerName: "입찰 개시", field: "bid_open_time", flex: 2 },
+  { headerName: "입찰 종료", field: "bid_close_time", flex: 2 },
+  {
+    headerName: "결제 시한",
+    field: "pay_due_datetime",
+    flex: 2,
+    sortable: true,
+  },
+  { headerName: "상태", field: "approveStatus", flex: 1 },
+  {
+    headerName: "첨부",
+    field: "actions",
+    cellRenderer: (params) => `
+      <button class="btn-download" data-id="${params.data.match_no}">보기</button>
+    `,
+  },
+  {
+    headerName: "수정",
+    field: "actions",
+    cellRenderer: (params) => `
+      <button class="btn-edit" data-id="${params.data.match_no}">수정</button>
+    `,
+    sortable: false,
+  },
+  {
+    headerName: "삭제",
+    field: "actions",
+    cellRenderer: (params) => `
+      <button class="btn-delete" data-id="${params.data.match_no}">삭제</button>
+    `,
+
+    sortable: false,
+  },
 ];
+
+const gridOptions = {
+  defaultColDef: {
+    resizable: true, // 열 크기 조정 가능
+    sortable: true, // 기본 정렬 활성화
+  },
+
+  onFirstDataRendered: (params) => {
+    // 데이터 로드 후 자동 너비 조정
+    const allColumnIds = params.columnApi
+      .getAllColumns()
+      .map((col) => col.getId());
+    params.columnApi.autoSizeColumns(allColumnIds);
+  },
+  autoSizeStrategy: {
+    type: "fitGridWidth",
+  },
+
+  pagination: true,
+  paginationPageSizeSelector: [10, 20, 30],
+  rowHeight: 40,
+};
+
+// 클릭 이벤트 처리
+const onCellClicked = (params) => {
+  const target = params.event.target;
+
+  // 삽입 모드에서는 삭제와 수정 버튼 클릭 무시
+  if (
+    insertMode.value &&
+    (target.classList.contains("btn-edit") ||
+      target.classList.contains("btn-delete"))
+  ) {
+    return;
+  }
+
+  // 수정 모드에서는 삭제 버튼 클릭 무시
+  if (updateMode.value && target.classList.contains("btn-delete")) {
+    return;
+  }
+
+  // 삭제 모드에서는 수정 버튼 클릭 무시
+  if (deleteMode.value && target.classList.contains("btn-edit")) {
+    return;
+  }
+
+  // 버튼 이벤트 처리
+  if (target.classList.contains("btn-edit")) {
+    handleUpdate(params.data); // 수정 처리
+  } else if (target.classList.contains("btn-delete")) {
+    handleDelete(params.data); // 삭제 처리
+  } else if (target.classList.contains("btn-download")) {
+    downloadFile(params.data.filename_attached); // 파일 다운로드 처리
+  }
+};
+
+// 테이블 컬럼 정의
 
 const generateRandomNumber = () => {
   const randomNum = Math.floor(Math.random() * 1e10);
@@ -346,10 +392,6 @@ const fetchMatches = async () => {
         role: localSessionData.role,
         venueCd: localSessionData.venueCd,
       },
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
-      withCredentials: true, // 쿠키 사용을 위한 설정
     });
 
     if (response.status === 200) {
@@ -362,16 +404,8 @@ const fetchMatches = async () => {
 
 const fetchVenues = async () => {
   try {
-    const response = await axiosInstance.get(APIs.GET_ALL_VENUES, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
-      withCredentials: true, // 쿠키 사용을 위한 설정
-    });
-
-    if (response.status === 200) {
-      venueArray.value = response.data;
-    }
+    const response = await axiosInstance.get(APIs.GET_ALL_VENUES);
+    venueArray.value = response.data;
   } catch (error) {
     handleError(error);
   }
@@ -379,7 +413,7 @@ const fetchVenues = async () => {
 
 const handleSubmit = async () => {
   //삭제의 경우 validateInput을 수행하지 않음
-  if (!deleteConfirmMode.value && !validateInput()) return;
+  if (!deleteMode.value && !validateInput()) return;
 
   let venueCd;
   if (newVenueCd) {
@@ -405,7 +439,7 @@ const handleSubmit = async () => {
     ...matchData.value,
     telno: localSessionData.telno,
     role: localSessionData.role,
-    venueCd: localSessionData.venueCd,
+    venueCd: venueCd,
     isBidAvailable: bidCd,
   };
 
@@ -416,11 +450,11 @@ const handleSubmit = async () => {
   };
 
   // 현재 모드 확인
-  const currentMode = insertInputMode.value
+  const currentMode = insertMode.value
     ? "insert"
-    : updateInputMode.value
+    : updateMode.value
     ? "update"
-    : deleteConfirmMode.value
+    : deleteMode.value
     ? "delete"
     : null;
 
@@ -433,18 +467,13 @@ const handleSubmit = async () => {
   const apiUrl = apiMapping[currentMode];
   try {
     // API 요청 시도
-    const response = await axiosInstance.post(apiUrl, requestData, {
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
-      withCredentials: true, // 쿠키 사용을 위한 설정
-    });
+    const response = await axiosInstance.post(apiUrl, requestData);
 
     // 응답 성공 확인
     if (response.status === 200) {
       message.value = response.data.message;
       // 파일 업로드 확인
-      if ((updateInputMode.value || insertInputMode.value) && newFileSelected) {
+      if ((updateMode.value || insertMode.value) && newFileSelected) {
         alert("첨부화일이 업로드되었습니다.");
         handleFileUpload();
       }
@@ -460,7 +489,7 @@ const handleSubmit = async () => {
 
 const handleSubmitCancel = () => {
   resetState();
-  message.value = "작업이 취소되었습니다.";
+  resetMessage();
 };
 
 const handleFileUpload = async () => {
@@ -474,9 +503,7 @@ const handleFileUpload = async () => {
     const response = await axiosInstance.post(APIs.UPLOAD_MATCHINFO, formData, {
       headers: {
         "Content-Type": "multipart/form-data", // 파일 업로드에 적합한 헤더 설정
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
       },
-      withCredentials: true, // 쿠키 사용을 위한 설정
     });
 
     if (response.status === 200) {
@@ -496,10 +523,6 @@ const downloadFile = async (fileName) => {
     const response = await axiosInstance.get(APIs.DOWNLOAD_MATCHINFO, {
       params: { fileName },
       responseType: "blob", // 파일 데이터(이진 데이터) 응답
-      headers: {
-        Authorization: `Bearer ${token}`, // 토큰을 헤더에 추가
-      },
-      withCredentials: true, // 쿠키 사용을 위한 설정
     });
 
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -519,35 +542,60 @@ const handleInsert = () => {
   resetForm();
   resetState();
   resetMessage();
-  resetForm();
-  insertInputMode.value = true;
+  insertMode.value = true;
 };
 
 const handleUpdate = (props) => {
   setNewMatchData(props);
   resetState();
   resetMessage();
-  updateInputMode.value = true;
+  updateMode.value = true;
 };
 
 const handleDelete = (props) => {
   setNewMatchData(props);
   resetState();
   resetMessage();
-  deleteConfirmMode.value = true;
+  deleteMode.value = true;
 };
 
 const handleError = (error) => {
-  if (error.response) {
-    message.value = error.response.data;
-  } else if (error.request) {
-    message.value = messageCommon.ERR_NETWORK;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
   } else {
-    message.value = messageCommon.ERR_ETC;
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
   }
 };
 
 const setNewMatchData = (match) => {
+  const parseDate = (dateStr) => {
+    return dateStr && !isNaN(new Date(dateStr).getTime())
+      ? new Date(dateStr).toISOString().slice(0, 10)
+      : ""; // 유효하지 않으면 빈 문자열 반환
+  };
+
+  const parseDateTime = (dateTimeStr) => {
+    return dateTimeStr && !isNaN(new Date(dateTimeStr).getTime())
+      ? new Date(dateTimeStr).toISOString().slice(0, 16)
+      : ""; // 유효하지 않으면 빈 문자열 반환
+  };
+
   matchData.value = {
     matchNumber: match.match_no,
     venueCd: match.venue_cd,
@@ -555,22 +603,17 @@ const setNewMatchData = (match) => {
     matchName: match.match_name,
     round: match.round,
     // startDate는 YYYY-MM-DD 형식으로 변환
-    startDate: match.start_date
-      ? new Date(match.start_date).toISOString().slice(0, 10)
-      : "",
+    startDate: parseDate(match.start_date),
     // startTime과 endTime을 HH:MM 형식으로 변환
     startTime: match.start_time ? match.start_time.slice(0, 5) : "",
     endTime: match.end_time ? match.end_time.slice(0, 5) : "",
-    bidOpenTime: match.bid_open_datetime
-      ? new Date(match.bid_open_datetime).toISOString().slice(0, 16)
-      : "",
-    bidCloseTime: match.bid_close_datetime
-      ? new Date(match.bid_close_datetime).toISOString().slice(0, 16)
-      : "",
+    // 일자 시간 형식으로 변환
+    bidOpenTime: parseDateTime(match.bid_open_datetime),
+    bidCloseTime: parseDateTime(match.bid_close_datetime),
+    payDue: parseDateTime(match.pay_due_datetime),
+    fileName: match.filename_attached,
     isBidAvailable: match.is_bid_available,
     bidLable: match.is_bid_available === "Y" ? "입찰가능" : "입찰불가능",
-    fileName: match.filename_attached,
-    payDue: match.pay_due_datetime,
   };
 };
 
@@ -583,13 +626,9 @@ const validateInput = () => {
     endTime,
     bidOpenTime,
     bidCloseTime,
-    isBidAvailable,
     payDue,
+    isBidAvailable,
   } = matchData.value;
-
-  // bidOpenTime과 bidCloseTime을 먼저 Date 객체로 변환
-  const bidStartDateTime = new Date(bidOpenTime);
-  const bidEndDateTime = new Date(bidCloseTime);
 
   if (!matchName) {
     alert("경기명을 입력해 주세요.");
@@ -616,22 +655,43 @@ const validateInput = () => {
     return false;
   }
 
-  // 입찰 종료 시간이 입찰 시작 시간보다 커야 함
-  if (bidEndDateTime <= bidStartDateTime) {
-    alert("입찰 마감시간은 입찰 시작시간보다 커야 합니다.");
-    return false;
-  }
-
-  // 입찰 종료 시간이 경기 시작 시간보다 크면 안 됨
-  if (bidEndDateTime >= new Date(startDate)) {
-    alert("입찰 종료 시간은 경기 시작 시간보다 작아야 합니다.");
-    return false;
-  }
-
   // 경기 종료 시간이 경기 시작 시간보다 커야 함
   if (new Date(endTime) <= new Date(startTime)) {
     alert("경기 종료 시간은 시작 시간보다 커야 합니다.");
     return false;
+  }
+
+  // 입찰 개시 시간이 입력되었는지 확인
+  if (bidOpenTime) {
+    const bidStart = new Date(bidOpenTime);
+    const bidEnd = new Date(bidCloseTime);
+    const start = new Date(startDate); // 경기 일
+    const due = new Date(payDue); // 결제 시한
+
+    // 입찰 종료 시간이 입찰 시작 시간보다 커야 함
+    if (bidEnd <= bidStart) {
+      alert("입찰 마감시간은 입찰 시작시간보다 커야 합니다.");
+      return false;
+    }
+
+    // 입찰 종료 시간이 경기 시작 시간보다 크면 안 됨
+    if (bidEnd >= start) {
+      alert("입찰 종료 시간은 경기 시작 시간보다 작아야 합니다.");
+      return false;
+    }
+    if (due) {
+      if (due <= bidEnd) {
+        alert("결제 시한은 입찰 종료시간보다 커야 합니다.");
+        return false;
+      }
+    } else {
+      alert("결제 시한을 입력해 주세요.");
+      return false;
+    }
+    if (due >= start) {
+      alert("결제 시한은 경기 시작일보다 작아야 합니다.");
+      return false;
+    }
   }
 
   // if (isBidAvailable === undefined || isBidAvailable === "") {
@@ -639,18 +699,13 @@ const validateInput = () => {
   //   return false;
   // }
 
-  // if (!endTime) {
-  //   alert("결제 시한을 입력해 주세요.");
-  //   return false;
-  // }
-
   return true;
 };
 
 const resetState = () => {
-  insertInputMode.value = false;
-  updateInputMode.value = false;
-  deleteConfirmMode.value = false;
+  insertMode.value = false;
+  updateMode.value = false;
+  deleteMode.value = false;
   newFileSelected = false;
 };
 
@@ -666,6 +721,7 @@ const resetForm = () => {
     endTime: "",
     bidOpenTime: "",
     bidCloseTime: "",
+    payDue: "",
     isBidAvailable: "",
     fileName: "",
   };
@@ -674,6 +730,7 @@ const resetForm = () => {
 };
 
 const resetMessage = () => {
+  guideMessage.value = "";
   message.value = "";
   fileMessage.value = "";
 };
@@ -685,4 +742,17 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.btn-download {
+  font-size: 10px; /* 글씨 크기 */
+  background-color: #007bff; /* 버튼 배경색 */
+  color: white; /* 글씨 색 */
+  border: none; /* 테두리 제거 */
+  border-radius: 2px; /* 버튼 모서리 둥글게 */
+  cursor: pointer; /* 마우스 커서 변경 */
+}
+
+.btn-download:hover {
+  background-color: #0056b3; /* 호버 시 배경색 */
+}
+</style>

@@ -1,21 +1,27 @@
-import { createApp } from "vue";
-import App from "./App.vue";
-import router from "./router";
-
-// Quasar 임포트
-import { Quasar, Notify } from "quasar";
-import "quasar/src/css/index.sass"; // Quasar의 기본 스타일
+import { createApp } from "vue"; // Vue 애플리케이션 생성 함수
+import App from "./App.vue"; // 애플리케이션의 루트 컴포넌트
+import router from "./router"; // Vue Router 설정
+import { Quasar, Dialog } from "quasar"; // Quasar UI 라이브러리 및 Notify 플러그인
+import "quasar/src/css/index.sass"; // Quasar 기본 스타일시트
 import "./assets/Common.css"; // 사용자 정의 CSS
+import { AgGridVue } from "ag-grid-vue3"; // AG Grid Vue 3 컴포넌트
+import "ag-grid-community/styles/ag-grid.css"; // AG Grid 기본 스타일
+import "ag-grid-community/styles/ag-theme-alpine.css"; // AG Grid Alpine 테마 스타일
 
-// Quasar 플러그인 및 설정
-const quasarOptions = {
+// Vue 애플리케이션 생성 및 설정
+const app = createApp(App); // 애플리케이션 인스턴스 생성
+
+// AG Grid를 전역으로 등록
+app.component("AgGridVue", AgGridVue);
+
+app.use(Quasar, {
   plugins: {
-    Notify,
+    Dialog,
   },
-};
+});
 
-// 애플리케이션 인스턴스 생성 및 설정
-createApp(App)
-  .use(Quasar, quasarOptions) // Quasar 인스턴스에 옵션 추가
-  .use(router) // Vue Router 사용
-  .mount("#app"); // 애플리케이션 마운트
+// Vue Router 추가
+app.use(router);
+
+// DOM의 #app 요소에 애플리케이션 마운트
+app.mount("#app");

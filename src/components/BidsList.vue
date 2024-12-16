@@ -91,13 +91,6 @@
           @click="emitPaySubmit"
           :disable="totalWinAmount === 0"
           label="낙찰 내용 결제"
-        />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <q-btn
-          push
-          color="white"
-          text-color="deep-orange-14"
-          @click="emitSelectVenue"
-          label="경기 다시 선택"
         />
       </q-card-section>
     </q-card>
@@ -135,11 +128,6 @@ const isSelectedHistory = (row) => props.selectedHistoryButton === row.seat_no;
 // 결제 제출 이벤트 emit
 const emitPaySubmit = () => {
   emit("paySubmit");
-};
-
-// 경기 선택 이벤트 emit
-const emitSelectVenue = () => {
-  emit("selectVenue");
 };
 </script>
 

@@ -10,7 +10,11 @@
         @click="toggleDrawer"
         v-if="$q.screen.lt.md"
       />
-      <q-toolbar-title>입찰 시스템 관리자용 시스템</q-toolbar-title>
+      <q-toolbar-title>
+        입찰 시스템 관리자용 시스템
+        <!-- 로그인된 경우 사용자 이름 표시 -->
+        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+      </q-toolbar-title>
 
       <!-- 데스크탑에서만 버튼 표시 -->
       <q-btn
@@ -22,7 +26,7 @@
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
+      <!-- <q-btn
         flat
         round
         dense
@@ -30,17 +34,9 @@
         @click="handleClickAction('bids')"
         :disable="!isLoggedIn || !hasSelectedMatch"
         v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        label="대회관리"
-        @click="handleClickAction('manageMatch')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+
+      <!-- <q-btn
         flat
         round
         dense
@@ -48,8 +44,8 @@
         @click="handleClickAction('approveMatch')"
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
+      <!-- <q-btn
         flat
         round
         dense
@@ -57,7 +53,7 @@
         @click="handleClickAction('updateSeatPrice')"
         :disable="!isLoggedIn || !hasSelectedMatch"
         v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
       <q-btn
         flat
         round
@@ -94,42 +90,33 @@
       <q-item
         clickable
         @click="handleClickAction('selectVenue')"
-        :disabled="!isLoggedIn"
+        :disable="!isLoggedIn"
       >
         <q-item-section>경기장 선택</q-item-section>
       </q-item>
-
-      <q-item
+      <!-- <q-item
         clickable
         @click="handleClickAction('bids')"
         :disable="!isLoggedIn || !hasSelectedMatch"
       >
         <q-item-section>입찰현황 및 낙찰진행</q-item-section>
-      </q-item>
+      </q-item> -->
 
-      <q-item
-        clickable
-        @click="handleClickAction('manageMatch')"
-        :disable="!isLoggedIn"
-      >
-        <q-item-section>대회관리</q-item-section>
-      </q-item>
-
-      <q-item
+      <!-- <q-item
         clickable
         @click="handleClickAction('approveMatch')"
         :disable="!isLoggedIn"
       >
         <q-item-section>대회승인</q-item-section>
-      </q-item>
+      </q-item> -->
 
-      <q-item
+      <!-- <q-item
         clickable
         @click="handleClickAction('updateSeatPrice')"
         :disable="!isLoggedIn || !hasSelectedMatch"
       >
         <q-item-section>좌석가격입력</q-item-section>
-      </q-item>
+      </q-item> -->
 
       <q-item
         clickable
@@ -138,7 +125,9 @@
       >
         <q-item-section>경기장 등록 및 수정</q-item-section>
       </q-item>
-
+      <q-item clickable v-ripple @click="handleClickAction('login')">
+        <q-icon name="home" />홈
+      </q-item>
       <q-item
         clickable
         @click="handleClickAction('logout')"
@@ -158,19 +147,20 @@ import { useQuasar } from "quasar";
 const props = defineProps({
   isLoggedIn: {
     type: Boolean,
-    default: false,
+    required: true,
   },
   hasSelectedMatch: {
     type: Boolean,
     default: false,
   },
+  username: {
+    type: String,
+    default: null, // 기본값 설정
+  },
 });
 
 const emit = defineEmits(["link-action"]);
-const { isLoggedIn } = toRefs(props);
-const { hasSelectedMatch } = toRefs(props);
 const leftDrawerOpen = ref(false);
-
 const handleClickAction = (action) => {
   leftDrawerOpen.value = false;
   emit("link-action", action);

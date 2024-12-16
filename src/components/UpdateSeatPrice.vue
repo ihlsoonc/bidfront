@@ -159,19 +159,19 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import { Dialog } from "quasar";
 import axiosInstance from "../utils/axiosInterceptor";
 import BidStatus from "./BidStatus.vue";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
-import { fetchLocalSession } from "../utils/sessionFunctions";
+import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { showConfirmDialog } from "../utils/dialogUtils";
 
 //session
 let matchNumber = 0;
-const localSessionData = fetchLocalSession(["matchNumber", "userClass"]);
-const token = localStorage.getItem("authToken");
+const sessionConext = getSessionContext();
+const localSessionData = fetchSessionData(sessionConext, ["matchNumber"]);
 const router = useRouter();
 
 //reactive
@@ -186,9 +186,9 @@ const seatUpdateMode = ref(false);
 const message = ref("");
 
 //const and columns
-const seatArrayToDelete = [];
+let seatArrayToDelete = [];
 const MAX_SEAT_PRICE = 500000;
-const INITIAL_BID_STATUS = "N"; //이 경우에만 좌석 일괄 생성과 수정이 가능하다.
+const INITIAL_BID_STATUS = "I"; //이 경우에만 좌석 일괄 생성과 수정이 가능하다.
 const columns = [
   {
     name: "seat_no",
@@ -225,14 +225,11 @@ const fetchBidStatus = async (matchNumber) => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
       params: { matchNumber },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      withCredentials: true,
     });
 
     bidStatus.value = response.data;
-    seatUpdateMode.value = bidStatus.value.bidStatusCode === INITIAL_BID_STATUS;
+    seatUpdateMode.value =
+      bidStatus.value.bid_open_status === INITIAL_BID_STATUS;
   } catch (error) {
     handleError(error);
   }
@@ -240,12 +237,8 @@ const fetchBidStatus = async (matchNumber) => {
 
 const fetchSeats = async (matchNumber) => {
   try {
-    const response = await axiosInstance.get(APIs.GET_SEATPRICE, {
+    const response = await axiosInstance.get(APIs.GET_SEATPRICES, {
       params: { matchNumber },
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      withCredentials: true,
     });
 
     seatArray.value = response.data.map((seat) => ({ ...seat, matchNumber }));
@@ -261,56 +254,95 @@ const handleSubmit = async () => {
   if (!isValid) {
     return;
   }
+
   const seatArrayToUpdate = getSeatsToUpdate(
     seatArray.value,
     fetchedSeatArray.value
   );
 
-  if (seatArrayToUpdate.length === 0 && seatArrayToDelete.value.length === 0) {
-    alert("변경된 내용이 없습니다.");
+  if (seatArrayToUpdate.length === 0 && seatArrayToDelete.length === 0) {
+    Dialog.create({
+      title: "오류",
+      message: "제출할 변경 내용이 없습니다.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
     return;
   }
+
   const confirmMessage = createConfirmMessage(
     seatArrayToUpdate.length,
-    seatArrayToDelete.value.length
+    seatArrayToDelete.length
   );
 
-  if (!confirm(confirmMessage)) return;
-  let messageDelete;
-  let messageUpdate;
+  Dialog.create({
+    title: "작업업 제출",
+    message: confirmMessage,
+    cancel: true, // '취소' 버튼을 추가
+    persistent: true,
+    ok: {
+      label: "예",
+      color: "primary",
+    },
+    cancel: {
+      label: "아니오",
+      color: "negative",
+    },
+  })
+    .onOk(async () => {
+      let messageDelete;
+      let messageUpdate;
 
-  if (seatArrayToDelete.value.length > 0) {
-    messageDelete = await deleteSeats(seatArrayToDelete.value, matchNumber);
-    seatArrayToDelete.value = [];
+      if (seatArrayToDelete.length > 0) {
+        messageDelete = await deleteSeats(seatArrayToDelete, matchNumber);
 
-    if (seatArrayToUpdate.length > 0) {
-      (messageUpdate = await updateSeats(seatArrayToUpdate)), matchNumber;
-    }
-    alert("작업이 성공적으로 수행되었습니다.");
+        seatArrayToDelete = [];
+      }
 
-    // 새로운 정보 불러오기
-    try {
-      await fetchSeats(matchNumber);
-    } catch (error) {
-      handleError(error);
-    }
-  }
+      if (seatArrayToUpdate.length > 0) {
+        messageUpdate = await updateSeats(seatArrayToUpdate, matchNumber);
+      }
+
+      Dialog.create({
+        title: "알림",
+        message: `작업이 성공적으로 수행되었습니다.`,
+        ok: {
+          label: "확인",
+          color: "primary",
+        },
+        persistent: true,
+      });
+
+      // 새로운 정보 불러오기
+      try {
+        await fetchSeats(matchNumber);
+      } catch (error) {
+        handleError(error);
+      }
+    })
+    .onCancel(() => {
+      Dialog.create({
+        title: "작업 취소",
+        message: `제출이 취소되었습니다.`,
+        ok: {
+          label: "확인",
+          color: "primary",
+        },
+        persistent: true,
+      });
+      return;
+    });
 };
+
 const deleteSeats = async (seatArrayToDelete, matchNumber) => {
   try {
-    const response = await axiosInstance.post(
-      APIs.DELETE_SEATPRICEARRAY,
-      {
-        seatPriceArray: seatArrayToDelete,
-        matchNumber: matchNumber,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.DELETE_SEATPRICEARRAY, {
+      seatPriceArray: seatArrayToDelete,
+      matchNumber: matchNumber,
+    });
 
     return response.data.message;
   } catch (error) {
@@ -321,19 +353,10 @@ const deleteSeats = async (seatArrayToDelete, matchNumber) => {
 
 const updateSeats = async (seatArrayToUpdate, matchNumber) => {
   try {
-    const response = await axiosInstance.post(
-      APIs.UPDATE_SEATPRICEARRAY,
-      {
-        seatPriceArray: seatArrayToUpdate,
-        matchNumber: matchNumber,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        withCredentials: true,
-      }
-    );
+    const response = await axiosInstance.post(APIs.UPDATE_SEATPRICEARRAY, {
+      seatPriceArray: seatArrayToUpdate,
+      matchNumber: matchNumber,
+    });
 
     return response.data.message;
   } catch (error) {
@@ -373,7 +396,15 @@ const validateSeats = (seatArray) => {
       .map((seat) => `좌석번호 ${seat.seat_no} (가격: ${seat.seat_price})\n`)
       .join(", ")}\n`;
   }
-  alert(message);
+  Dialog.create({
+    title: "알림",
+    message: message,
+    ok: {
+      label: "확인",
+      color: "primary",
+    },
+    persistent: true,
+  });
   return { isValid: false };
 };
 
@@ -418,17 +449,14 @@ const handleRemoveRow = (row) => {
 
   showConfirmDialog({
     title: "좌석 삭제 확인",
-    message:
-      "정말로 이 좌석을 삭제하시겠습니까? 최종삭제는 작업 종료 후 `수정 내역 제출버튼`을 누르면 반영됩니다.",
+    message: `${seat_no}번 좌석을 삭제하겠습니까? 최종삭제는 작업 종료 후 "수정 내역 제출" 버튼을 누르면 반영됩니다.`,
     okLabel: "예",
     cancelLabel: "아니오",
     onOk: () => {
-      seatArrayToDelete.value.push({ seat_no: seat_no });
+      seatArrayToDelete.push({ seat_no: seat_no });
       seatArray.value = seatArray.value.filter((seat) => seat !== row);
     },
-    onCancel: () => {
-      console.log("좌석 삭제가 취소되었습니다.");
-    },
+    onCancel: () => {},
   });
 };
 
@@ -456,30 +484,33 @@ const handleCreatSeatArray = async () => {
       message:
         "현재 좌석이 모두 삭제된 후 새 좌석이 생성됩니다. 계속하시겠습니까?",
       onOk: async () => {
-        seatArrayToDelete.value = seatArray.value;
-        if (seatArrayToDelete.value.length > 0) {
-          messageDelete = await deleteSeats(
-            seatArrayToDelete.value,
-            matchNumber
-          );
+        seatArrayToDelete = seatArray.value;
+        if (seatArrayToDelete.length > 0) {
+          messageDelete = await deleteSeats(seatArrayToDelete, matchNumber);
         }
         // 삭제 완료 후 초기화
         fetchedSeatArray.value = [];
-        seatArrayToDelete.value = [];
+        seatArrayToDelete = [];
         seatArray.value = [];
         showSeatCreatePrompt.value = true;
         message.value = messageDelete;
       },
-      onCancel: () => {
-        alert("작업이 취소되었습니다.");
-      },
+      onCancel: () => {},
     });
   }
 };
 
 const submitCreateSeatArray = async () => {
   if (seatCount.value <= 0 || startSeatNumber.value < 1) {
-    alert("좌석 개수와 시작 번호는 1 이상의 숫자여야 합니다.");
+    Dialog.create({
+      title: "오류",
+      message: "좌석 개수와 시작 번호는 1 이상의 숫자여야 합니다.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
     return;
   }
   seatArray.value = Array.from({ length: seatCount.value }, (_, index) => ({
@@ -506,12 +537,21 @@ const submitCreateSeatArray = async () => {
 const handleCancelEdit = () => {
   showConfirmDialog({
     title: "입력 내용 취소",
-    message: "정말로 변경 내용을 취소하고 원래 상태로 되돌리시겠습니까?",
+    message: "변경 내용을 취소하고 원래 상태로 되돌리시겠습니까?",
     okLabel: "예",
     cancelLabel: "아니오",
     onOk: () => {
       // 사용자가 확인을 선택한 경우 원래 상태로 되돌림
       seatArray.value = JSON.parse(JSON.stringify(fetchedSeatArray.value));
+      Dialog.create({
+        title: "알림",
+        message: "입력 내용이 취소되었습니다.",
+        ok: {
+          label: "확인",
+          color: "primary",
+        },
+        persistent: true,
+      });
     },
     onCancel: () => {},
   });
@@ -522,7 +562,7 @@ const hideSeatCreatePrompt = () => {
 };
 
 const handleBackToLogin = () => {
-  navigate(router, localSessionData.userClass, "login");
+  navigate(router, sessionConext, "login");
 };
 
 const resetLoginStatus = () => {
@@ -530,11 +570,27 @@ const resetLoginStatus = () => {
 };
 
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 401발생
+  if (error.response?.status === 403 || error.response?.status === 401) {
+    Dialog.create({
+      title: "오류",
+      message: "세션이 만료되었거나 권한이 없습니다. \n다시 로그인해 주세요.",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+    navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 onMounted(async () => {
@@ -544,7 +600,7 @@ onMounted(async () => {
     await fetchSeats(matchNumber);
   } else {
     alert("경기를 먼저 선택해주세요.");
-    navigate(router, localSessionData.userClass, "selectMatch");
+    navigate(router, sessionConext, "selectMatch");
   }
 });
 </script>
