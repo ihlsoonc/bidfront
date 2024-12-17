@@ -102,7 +102,8 @@ import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
 
 // 상수 및 세션 관련 변수 선언
-let sessionConext = getSessionContext();
+let sessionContext = getSessionContext();
+const localSessionData = fetchSessionData(sessionContext, ["telno"]);
 // 입력 및 상태 관련 ref 선언
 const router = useRouter();
 const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
@@ -116,7 +117,7 @@ const message = ref(""); // 상태 메시지
 
 // 사용자 정보 조회 함수
 const handleSearch = async () => {
-  const requiredRole = sessionConext;
+  const requiredRole = sessionContext;
   let roleInDB = "";
   try {
     const response = await axiosInstance.post(APIs.GET_USER_WITH_PASSWORD, {
@@ -128,7 +129,7 @@ const handleSearch = async () => {
     roleInDB = response.data.role;
     if (requiredRole !== roleInDB) {
       alert("현재 시스템에 권한이 없습니다.");
-      navigate(router, sessionConext, "login");
+      navigate(router, sessionContext, "login");
     }
     if (response.status === 200 && response.data) {
       userData.value = response.data;
@@ -278,7 +279,7 @@ const handleReset = () => {
 };
 
 const handleBackToLogin = () => {
-  navigate(router, sessionConext, "login");
+  navigate(router, sessionContext, "login");
 };
 
 const resetLoginStatus = () => {
@@ -287,6 +288,9 @@ const resetLoginStatus = () => {
 
 // onMounted에서 테이블 이름 설정
 onMounted(async () => {
+  if (localSessionData.telno) {
+    userData.value.query = localSessionData.telno;
+  }
   passwordMsg.value = "사용자 정보 수정을 위해 비밀번호를 입력해주세요.";
 });
 </script>

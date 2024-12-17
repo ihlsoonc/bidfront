@@ -148,11 +148,7 @@ const handleSubmit = async () => {
       handleNavigate("selectVenue");
     } else {
       alert("현재 시스템에 권한이 없습니다.");
-      message.value =
-        `현재 시스템에 권한이 없습니다. ` +
-        requiredRole +
-        " " +
-        response.data.role;
+      message.value = `현재 시스템에 권한이 없습니다. `;
       clearSessionByContext(sessionContext);
       resetLoginStatus();
     }

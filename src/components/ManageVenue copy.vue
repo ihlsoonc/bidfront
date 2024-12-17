@@ -66,19 +66,6 @@
           :disable="deleteMode"
           class="q-mb-md"
         />
-        <!-- <q-file
-          v-model="venueData.venueImage"
-          label="경기장 이미지 화일"
-          accept="image/*"
-          class="q-mb-md"
-          @update:model-value="onFileSelected"
-        /> -->
-        <q-input
-          v-model="venueData.venueImageFileName"
-          label="화일명"
-          :disable="deleteMode"
-          class="q-mb-md"
-        />
       </q-form>
       <q-btn
         push
@@ -124,13 +111,10 @@ const venueData = ref({
   venueName: "",
   venuePlaceInfo: "",
   venueGeneralInfo: "",
-  venueImage: "",
-  venueImageFileName: "",
 });
 const insertMode = ref(false);
 const updateMode = ref(false);
 const deleteMode = ref(false);
-let newFileSelected = false;
 const message = ref("");
 
 const guideMessage = computed(() => {
@@ -222,31 +206,6 @@ const onCellClicked = (params) => {
   }
 };
 
-// const onFileSelected = (event) => {
-//   const file = event.target.files ? event.target.files[0] : null;
-//   // 유효성 검사: 영문자와 숫자만 허용
-//   const isValidFileName = /^[a-zA-Z0-9]+$/.test(file.name.split(".")[0]);
-
-//   if (!isValidFileName) {
-//     alert("파일 이름은 영문자와 숫자만 허용됩니다.");
-//     newFileSelected = false;
-//     return; // 유효하지 않은 파일 이름은 처리하지 않음
-//   }
-//   if (file.name === venueData.value.veue_img_file) {
-//     alert("새로운 Upload화일은 기존 화일명과 달라야 합니다.");
-//     fileInput.value = "";
-//     venueData.value.venueImageFileName = "";
-//     newFileSelected = false;
-//     return;
-//   }
-//   if (file) {
-//     newFileSelected = true;
-//     venueData.value.file = file;
-//     venueData.value.venueImageFileName = file.name;
-//     alert(file.name);
-//   }
-// };
-
 // 데이터 가져오기
 const fetchVenues = async () => {
   try {
@@ -318,7 +277,6 @@ const setNewVenueData = (venue) => {
     venueName: venue.venue_name,
     venuePlaceInfo: venue.venue_place_info,
     venueGeneralInfo: venue.venue_general_info,
-    venueImageFileName: venue.venue_img_file,
   };
 };
 

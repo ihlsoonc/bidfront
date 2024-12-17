@@ -15,10 +15,7 @@
           <q-input
             v-model="userData.telno"
             label="전화번호"
-            mask="###########"
-            :rules="[(val) => !!val || '전화번호를 입력하세요.']"
-            :readonly="isValidTelno"
-            @update:model-value="checkTelNumber"
+            readonly
             outlined
           />
           <q-btn
@@ -49,13 +46,7 @@
       <q-tab-panel name="changePassword">
         <q-card-section>
           <h5>비밀번호 변경</h5>
-          <q-input
-            v-model="id"
-            label="전화번호"
-            mask="###########"
-            outlined
-            :readonly="isValidUser"
-          />
+          <q-input v-model="id" label="전화번호" readonly outlined />
           <q-input
             v-model="currentPassword"
             label="현재 비밀번호"
@@ -103,21 +94,21 @@
       />
     </div>
 
-    <q-banner v-if="message" class="bg-info text-white q-mt-md">
+    <q-banner v-if="message">
       {{ message }}
     </q-banner>
   </q-page>
 </template>
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
 import axiosInstance from "../utils/axiosInterceptor";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
-const sessionConext = getSessionContext();
-const localSessionData = fetchSessionData(sessionConext, ["telno"]);
+const sessionContext = getSessionContext();
+const localSessionData = fetchSessionData(sessionContext, ["telno"]);
 const route = useRoute();
 
 const activeTab = ref("");
@@ -158,19 +149,6 @@ const handleTelnoCheck = async () => {
   } catch (error) {
     message.value = error.response.data;
     codeInputMode.value = true; //test에서
-  }
-};
-
-// 전화번호 변경 확인
-const checkTelNumber = () => {
-  message.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
-  isValidTelno.value = false;
-};
-
-// 인증번호 확인
-const checkAuthNumber = () => {
-  if (userData.value.authNumber.length === 6) {
-    compareAuthNumber();
   }
 };
 
@@ -277,6 +255,20 @@ const handleError = (error) => {
     }
   }
 };
+
+watch(activeTab, (newTab) => {
+  if (newTab === "resetPassword") {
+    userData.value.telno = localSessionData.telno;
+
+    message.value = "인증번호 발송 버튼을 눌러주세요.";
+
+    isValidTelno.value = false;
+  } else if (newTab === "changePassword") {
+    id.value = localSessionData.telno;
+    currentPassword.value = "...";
+    message.value = "현재 비밀번호를 다시 입력하세요.";
+  }
+});
 
 // 컴포넌트가 마운트될 때 실행
 onMounted(() => {
