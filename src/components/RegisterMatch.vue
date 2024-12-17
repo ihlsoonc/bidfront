@@ -203,7 +203,7 @@ const bidOptions = computed(() => [
   { label: "입찰 불가능", value: "N" },
 ]);
 
-// 테이블 컬럼 정의
+// upload화일명에 추가하기 위한 난수 : 화일명 중복을 피하기 위함
 const generateRandomNumber = () => {
   const randomNum = Math.floor(Math.random() * 1e10);
   return randomNum.toString().padStart(10, "0");

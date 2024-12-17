@@ -223,6 +223,7 @@ const compareAuthNumber = async () => {
       isValidTelno.value = true;
       authCodeInputMode.value = false;
       userData.value.authNumber = "";
+      resetUserData();
     }
   } catch (error) {
     handleError(error);
@@ -349,6 +350,20 @@ const validateEmailPattern = () => {
   }
   return true;
 };
+
+function resetUserData() {
+  userData.value = {
+    password: "",
+    password2: "",
+    username: "",
+    email: "",
+    postcode: "",
+    addr1: "",
+    addr2: "",
+    role: "",
+  };
+}
+
 // 에러 처리 함수
 const handleError = (error) => {
   message.value = error.response
