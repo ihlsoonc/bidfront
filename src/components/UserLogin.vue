@@ -73,7 +73,6 @@ import {
   getSessionContext,
   fetchSessionData,
   saveSessionData,
-  removeSessionData,
   clearSessionByContext,
 } from "../utils/sessionFunctions";
 import { navigate } from "../utils/navigate";
@@ -83,13 +82,8 @@ const emit = defineEmits(["update-status"]);
 const userData = ref({ query: "", password: "" });
 const isRootUser = ref(false);
 const message = ref("");
-const sessionContext = getSessionContext();
-const localSessionData = fetchSessionData(sessionContext, [
-  "authToken",
-  "telno",
-  "username",
-  "venueCd",
-]);
+let sessionContext = "";
+let localSessionData = "";
 
 // 버튼 액션 핸들러
 const handleNavigate = (action, tab) =>
@@ -200,6 +194,13 @@ const revalidateUser = () => {
 };
 
 onMounted(async () => {
+  sessionContext = getSessionContext();
+  localSessionData = fetchSessionData(sessionContext, [
+    "authToken",
+    "telno",
+    "username",
+    "venueCd",
+  ]);
   if (localSessionData.telno) {
     userData.value.query = localSessionData.telno;
     userData.value.password = "";
@@ -207,7 +208,7 @@ onMounted(async () => {
       message.value = `${localSessionData.username}님은 로그인 되어 있습니다.`;
       setLoggedIn();
     } else {
-      resetLoginStatus;
+      resetLoginStatus();
       message.value = `로그인 해주세요.`;
     }
   } else {

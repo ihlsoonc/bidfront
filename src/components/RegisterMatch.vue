@@ -3,7 +3,7 @@
     <h6>대회 정보 등록 및 수정</h6>
     <!-- <p>정보를 입력한 후 확인 버튼을 누르세요.</p> -->
 
-    <div :key="formKey">
+    <div>
       <q-form @submit.prevent="handleSubmit">
         <p>{{ insertMessage }}</p>
         <div class="rowflex-container">
@@ -149,6 +149,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { Dialog } from "quasar";
 import axiosInstance from "../utils/axiosInterceptor";
 import { formatTimeToLocal } from "../utils/formatTimeToLocal";
 import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
@@ -317,13 +318,30 @@ const handleSubmit = async () => {
   try {
     // API 요청 시도
     const response = await axiosInstance.post(apiUrl, requestData);
-
+    Dialog.create({
+      title: "알림",
+      message: `성공적으로 경기가 등록되었습니다.`,
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
     // 응답 성공 확인
     if (response.status === 200) {
       message.value = response.data.message;
       // 파일 업로드 확인
       if ((updateMode.value || insertMode.value) && newFileSelected) {
-        alert("첨부화일이 업로드되었습니다.");
+        Dialog.create({
+          title: "알림",
+          message: `첨부화일이 업로드되었습니다.`,
+          ok: {
+            label: "확인",
+            color: "primary",
+          },
+          persistent: true,
+        });
+        // alert("첨부화일이 업로드되었습니다.");
         handleFileUpload();
       }
       resetFileState();

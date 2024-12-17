@@ -80,7 +80,7 @@
               color="primary"
               label="경기 승인"
               v-if="isAdmin && match.approved !== 'Y'"
-            />
+            />&nbsp;
 
             <q-btn
               @click.stop="
@@ -102,11 +102,7 @@
               @click.stop="handleInputPrice(match.match_no)"
               color="primary"
               label="가격 입력"
-              v-if="
-                isAdmin &&
-                match.bid_status_code === 'BEFORE_OPEN' &&
-                match.approved !== 'Y'
-              "
+              v-if="isAdmin"
             />
             <!-- 관리자 일괄 입찰 승인용 버튼 -->
             {{ match_reserved }}

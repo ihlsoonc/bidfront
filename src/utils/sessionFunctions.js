@@ -18,7 +18,7 @@ export const getSessionContext = () => {
   const context = localStorage.getItem(contextKey) || null;
 
   // 로그 출력
-  // console.log(`== Context 조회: Key = ${contextKey}, Value = ${context}`);
+  console.log(`== Context 조회: Key = ${contextKey}, Value = ${context}`);
 
   return context;
 };
@@ -49,7 +49,7 @@ export const fetchSessionData = (context, keys) => {
       );
     } else {
       // 값이 있는 경우 로그 출력
-      // console.log(`session Key = ${sessionKey}, Value = ${value}`);
+      console.log(`session Key = ${sessionKey}, Value = ${value}`);
     }
 
     result[key] = value;

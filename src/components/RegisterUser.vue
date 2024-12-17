@@ -14,6 +14,7 @@
           maxlength="11"
           autocomplete="tel"
           @input="resetTelnoStatus"
+          :disabled="isValidTelno"
         />
       </label>
       <button @click="validateTelno" type="button" :disabled="isValidTelno">
@@ -352,7 +353,9 @@ const validateEmailPattern = () => {
 };
 
 function resetUserData() {
+  const telno = userData.value.telno; // 기존 전화번호 값 저장
   userData.value = {
+    telno, // 기존 전화번호 유지
     password: "",
     password2: "",
     username: "",
