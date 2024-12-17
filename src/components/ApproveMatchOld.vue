@@ -226,7 +226,7 @@ const gridOptions = {
   rowHeight: 50,
 };
 
-// API 호출
+// 경기 목록 조회
 const fetchMatches = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_ALL_MATCHES, {
@@ -244,7 +244,7 @@ const fetchMatches = async () => {
   }
 };
 
-// 버튼 클릭 이벤트 처리
+// 그리드내 버튼 클릭 이벤트 처리
 const onCellClicked = (params) => {
   const target = params.event.target;
   const matchNo = target.getAttribute("data-id");
@@ -258,16 +258,19 @@ const onCellClicked = (params) => {
   }
 };
 
+//승인
 const handleApprove = (match) => {
   canApprove.value = true;
   setSelectedMatchData(match);
 };
 
+//승인 취소
 const handleResetApprove = (match) => {
   canDisapprove.value = true;
   setSelectedMatchData(match);
 };
 
+//선택된 경기 정보를 하단의 detail용을 set
 const setSelectedMatchData = (match) => {
   const formattedStartDate = formatTimeToLocal(match.start_datetime);
   const formattedEndDate = formatTimeToLocal(match.end_datetime);
@@ -288,6 +291,7 @@ const setSelectedMatchData = (match) => {
   };
 };
 
+//승인 혹은 승인 취소 처리
 const handleSubmit = async () => {
   try {
     let actionType = canDisapprove.value ? "N" : "Y";
@@ -309,10 +313,12 @@ const handleSubmit = async () => {
   }
 };
 
+//작업 취소
 const handleSubmitCancel = () => {
   resetState();
 };
 
+//첨부화일 다운로드
 const downloadFile = async (fileName) => {
   if (!fileName) {
     alert("첨부 파일이 없습니다.");

@@ -177,7 +177,7 @@ const validateTelno = async () => {
       ...userData.value,
     });
     if (response.status === 200) {
-      message.value = `인증번호가 발송되었습니다. ${response.data.verificationCode}`;
+      message.value = response.data.message;
     }
   } catch (error) {
     handleError(error);

@@ -34,18 +34,18 @@ import {
 } from "../utils/sessionFunctions"; // 세션 설정 유틸리티 함수
 import { messageCommon } from "../utils/messageCommon";
 
-// Quasar와 Vue Router 사용 설정
 const router = useRouter();
 const $q = useQuasar();
 
 // sessionContext : navigation path & localStorate prefix
 const sessionContext = "admin";
 
-// 상태 관리 변수 - 메뉴 버튼 활성화 여부
 const message = ref("");
 const username = ref(
   fetchSessionData(sessionContext, ["username"])?.username || ""
 );
+
+// 상태 관리 변수 - 메뉴 버튼 활성화 용
 const isLoggedIn = ref(false); // 로그인 상태 여부
 const hasSelectedMatch = ref(false); // 경기 선택 여부
 

@@ -36,7 +36,6 @@
       </q-card-section>
     </q-card>
     <div>
-      <!-- {{ bidStatus.bid_status_code }} -->
       <q-btn
         v-if="bidStatus.reserved_approval !== 'Y'"
         @click="handleBidSubmit"
@@ -108,7 +107,6 @@ const handleShowDetail = () => {
 
 const fetchBidStatus = async (matchNumber) => {
   try {
-    // API 호출
     const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
       params: { matchNumber: matchNumber },
     });

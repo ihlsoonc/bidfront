@@ -164,7 +164,7 @@ const handleRefresh = async () => {
   setButtons();
 };
 
-// 낙찰을 진행하는 함수
+// 낙찰을 진행 진행을 confirm
 const handleAwardBid = async () => {
   if (!canAwardBid.value) {
     Dialog.create({
@@ -201,6 +201,7 @@ const handleAwardBid = async () => {
   });
 };
 
+//낙찰 진행
 const awardBid = async () => {
   try {
     const response = await axiosInstance.post(APIs.AWARD_BID, {
@@ -228,8 +229,7 @@ const awardBid = async () => {
   }
 };
 
-// 알림톡 보내기
-
+// 알림톡 전송 확인
 const handleSendAlimtalk = async () => {
   showConfirmDialog({
     title: "알림톡 전송 확인",
@@ -253,6 +253,7 @@ const handleSendAlimtalk = async () => {
   });
 };
 
+// 알림톡 보내기
 const sendAlimtalk = async () => {
   try {
     await axiosInstance.post(APIs.SEND_KAKAO_ALIMTALK, {
@@ -340,7 +341,7 @@ const fetchHighestBids = async (matchNumber) => {
   }
 };
 
-//전체 낙찰 내역
+//전체 입찰 내역
 const fetchBidsDetail = async (matchNumber) => {
   try {
     const response = await axiosInstance.get(APIs.GET_ALL_BIDS, {
@@ -380,7 +381,7 @@ const fetchBidsDetail = async (matchNumber) => {
   }
 };
 
-//좌석 box안의 입찰자수 최고 입찰액 표시
+//좌석 box안의 입찰자수 최고 입찰액 표시를 위한 데이터
 const fetchBidsTallies = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_TALLIES, {
@@ -411,6 +412,7 @@ const handleSeatClick = (index) => {
   //no action here : 사용자 입찰화면에서 사용됨
 };
 
+// 상황별 버튼 활성화
 const setButtons = () => {
   // 버튼 초기화
   canAwardBid.value = false;
@@ -418,7 +420,7 @@ const setButtons = () => {
   canReFetch.value = false;
 
   const { bid_status_name, alimtalk_sent } = bidStatus.value;
-  // 경매 상태에 따라 버튼 활성화 설정
+  // 입찰찰 상태에 따라 버튼 활성화 설정
   if (bid_status_name === CLOSED_BID && biddedSeatCount > 0) {
     canAwardBid.value = true;
   }
@@ -433,7 +435,6 @@ const setButtons = () => {
 };
 
 // 에러 핸들링
-
 const handleError = (error) => {
   //refresh expired인 경우 401발생
   if (error.response?.status === 403 || error.response?.status === 401) {
@@ -477,23 +478,7 @@ onBeforeMount(async () => {
 });
 
 // 세션 데이터 및 데이터 불러오기
-onMounted(async () => {
-  // matchNumber = localSessionData.matchNumber;
-  // if (matchNumber) {
-  //   try {
-  //     await fetchBidStatus(matchNumber);
-  //     await fetchBidsTallies();
-  //     await fetchHighestBids(matchNumber);
-  //     await fetchBidsDetail(matchNumber);
-  //     setButtons();
-  //   } catch (error) {
-  //     handleError(error);
-  //   }
-  // } else {
-  //   alert("경기를 먼저 선택해주세요.");
-  //   navigate(router, sessioncontext, "selectMatch");
-  // }
-});
+onMounted(async () => {});
 </script>
 
 <style scoped>

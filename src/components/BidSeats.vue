@@ -108,6 +108,7 @@ const tableColumns = ref([
   { name: "bidHistory", label: "이력", align: "left" },
 ]);
 
+//경기정보를 fetch
 const fetchBidStatus = async (matchNumber) => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_STATUS, {
@@ -122,6 +123,7 @@ const fetchBidStatus = async (matchNumber) => {
   }
 };
 
+//사용자의 좌석별 마지막 입찰목록 fetch
 const fetchMyLast = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_MY_LASTBIDS, {
@@ -163,6 +165,7 @@ const fetchMyLast = async () => {
   }
 };
 
+//사용자의 좌석별 모든 입찰목록 fetch : bidHistoty를 구성하여 내역보기에 사용용
 const fetchMyBids = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_MY_BIDS, {
@@ -200,6 +203,7 @@ const fetchMyBids = async () => {
   }
 };
 
+//좌석Map에 입찰자수 최고 입찰금액을 보여주기위한 fetch
 const fetchBidTallies = async () => {
   try {
     const response = await axiosInstance.get(APIs.GET_BID_TALLIES, {
@@ -220,28 +224,7 @@ const fetchBidTallies = async () => {
   }
 };
 
-const handleSeatClick2 = (index) => {
-  selectedSeats.value = selectedSeats.value.some(
-    (seat) => seat.uniqueSeatId === index
-  )
-    ? selectedSeats.value.filter((seat) => seat.uniqueSeatId !== index)
-    : [...selectedSeats.value, { seat_no: index, uniqueSeatId: index }];
-
-  if (selectedSeats.value.length > MAX_SELECTION) {
-    Dialog.create({
-      title: "오류",
-      message: `최대 ${MAX_SELECTION}개의 좌석만 선택할 수 있습니다.`,
-      ok: {
-        label: "확인",
-        color: "primary",
-      },
-      persistent: true,
-    });
-    selectedSeats.value = selectedSeats.value.slice(0, MAX_SELECTION);
-  }
-  clickCount.value += 1;
-};
-
+//좌석을 click할 때의 처리
 const handleSeatClick = (index) => {
   selectedSeats.value = selectedSeats.value.some(
     (seat) => seat.uniqueSeatId === index
@@ -279,6 +262,7 @@ const handleSeatClick = (index) => {
   }
 };
 
+//좌석목록으로 각 좌석의 최신 입찰 최고가 등을 조회
 const fetchSeatData = async (
   matchNumber,
   selectedSeats,
@@ -328,6 +312,7 @@ const fetchSeatData = async (
   }
 };
 
+//입찰 제출전 validation 및 확인
 const handleSubmitBid = async (bidTotal) => {
   // 최소 입찰가보다 낮은 입찰을 필터링하는 함수
   const getMinBidPrice = (seat) => {
@@ -393,6 +378,7 @@ const handleSubmitBid = async (bidTotal) => {
     });
 };
 
+//입찰 제출
 const submitBid = async () => {
   try {
     const response = await axiosInstance.post(
@@ -443,6 +429,7 @@ const submitBid = async () => {
   }
 };
 
+//입찰 제출 취소소
 const handleCancelSubmit = () => {
   Dialog.create({
     title: "입찰 제출 취소",
@@ -491,6 +478,7 @@ const objectToQueryString = (obj) => {
     .join("&");
 };
 
+//낙찰건 결제
 const handlePaySubmit = async () => {
   //현재 화면에서 logout한 경우를 체크
   const sessionContext = getSessionContext();
@@ -518,9 +506,9 @@ const handlePaySubmit = async () => {
   }
 };
 
+//모바일 여부 확인인
 function isMobile() {
-  return false;
-  // return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
 const handleSelectVenue = () => {
@@ -539,25 +527,6 @@ const handleBackToSelect = () => {
   alert("경기를 선택해주세요.");
   navigate(router, sessionContext, "selectVenue");
 };
-
-// watch(
-//   [clickCount],
-//   () => {
-//     if (selectedSeats.value.length > 0) {
-//       fetchSeatData(
-//         matchNumber,
-//         selectedSeats.value,
-//         (data) => {
-//           selectedSeats.value = data;
-//         },
-//         (msg) => {
-//           message.value = msg;
-//         }
-//       );
-//     }
-//   },
-//   { deep: true }
-// );
 
 const fetchData = async () => {
   try {

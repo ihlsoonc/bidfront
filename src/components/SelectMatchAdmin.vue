@@ -1,17 +1,17 @@
-// bid_open_status가 'F'이면 낙찰 완료로 설정
+<!-- bidStatus 서버 로직 -->
 <!-- if ("F".equals(bidOpenStatus)) {
-    bidStatusName = "낙찰 완료"; // 낙찰 완료 상태
+    bidStatusName = "낙찰 완료";
     bidStatusCode = "AWARDED";
 } else {
     // 현재 시간과 비교하여 상태 코드와 이름 설정
     if (now.isBefore(openDateTime)) {
-        bidStatusName = "입찰 개시전"; // 입찰 시작 전
+        bidStatusName = "입찰 개시전";
         bidStatusCode = "BEFORE_OPEN";
     } else if (now.isAfter(closeDateTime)) {
-        bidStatusName = "입찰 종료"; // 입찰 종료 후 낙찰 처리 전
+        bidStatusName = "입찰 종료";
         bidStatusCode = "CLOSED";
     } else {
-        bidStatusName = "입찰 진행중"; // 입찰 진행 중
+        bidStatusName = "입찰 진행중";
         bidStatusCode = "IN_PROGRESS";
     }
 } -->
@@ -185,13 +185,10 @@ const localSessionData = fetchSessionData(sessionContext, [
 ]);
 
 const router = useRouter();
-
 const matchArray = ref([]);
 const selectedButton = ref(null);
 const isAdmin = ref(false);
 const isAdminM = ref(false);
-const canApprove = ref(false);
-const canDisapprove = ref(false);
 const message = ref("");
 
 // 서버에서 경기 목록을 가져오는 함수
@@ -210,6 +207,7 @@ const fetchMatches = async () => {
   }
 };
 
+// 승인 취소 확인
 const resetApprove = (matchNumber, matchName) => {
   Dialog.create({
     title: "승인 취소 확인",
@@ -232,10 +230,13 @@ const resetApprove = (matchNumber, matchName) => {
       return;
     });
 };
+
+//승인 처리
 const handleApprove = (matchNumber) => {
   handleSubmit(matchNumber, "Y");
 };
 
+//승인 및 승인취소
 const handleSubmit = async (matchNumber, approveFlag) => {
   try {
     const requestData = {
@@ -264,7 +265,7 @@ const handleSubmit = async (matchNumber, approveFlag) => {
   }
 };
 
-// 경기 선택 처리 함수
+// 경기 선택 처리 : 입찰내역 조회로 이동
 const handleSelectMatch = (index) => {
   const match = matchArray.value[index];
   saveSessionData(sessionContext, {
@@ -279,6 +280,7 @@ const handleSelectMatch = (index) => {
   navigate(router, sessionContext, "bids");
 };
 
+//일괄입찰 예약 화면으로 이동
 const handleReserve = (matchNumber) => {
   saveSessionData(sessionContext, {
     matchNumber: matchNumber,
@@ -286,6 +288,7 @@ const handleReserve = (matchNumber) => {
   navigate(router, sessionContext, "reserveMatch");
 };
 
+//일괄입찰 승인 화면으로 이동
 const handleReserveAdmin = (matchNumber) => {
   saveSessionData(sessionContext, {
     matchNumber: matchNumber,
@@ -293,12 +296,15 @@ const handleReserveAdmin = (matchNumber) => {
   navigate(router, sessionContext, "reserveMatch");
 };
 
+//좌석가격 입력 화면으로 이동
 const handleInputPrice = (matchNumber) => {
   saveSessionData(sessionContext, {
     matchNumber: matchNumber,
   });
   navigate(router, sessionContext, "updateSeatPrice");
 };
+
+//경기수정 화면으로 이동
 const handleUpdate = (matchNumber) => {
   saveSessionData(sessionContext, {
     matchNumber: matchNumber,
@@ -306,6 +312,7 @@ const handleUpdate = (matchNumber) => {
   navigate(router, sessionContext, "updateMatch", { workMode: "update" });
 };
 
+//화일 다운로드
 const handleDownLoad = async (fileName) => {
   if (!fileName) {
     message.value("첨부화일이 없습니다.");
@@ -330,12 +337,7 @@ const handleDownLoad = async (fileName) => {
   }
 };
 
-// 로그인 상태 초기화
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
-};
-
-// 오류 처리 함수
+// 삭제 확인
 const handleDelete = async (matchNumber, matchName) => {
   // 총 입찰 금액 확인 메시지
   Dialog.create({
@@ -360,13 +362,13 @@ const handleDelete = async (matchNumber, matchName) => {
     });
 };
 
+//삭제 처리
 const deleteMatch = async (matchNumber) => {
   const requestData = {
     matchNumber: matchNumber,
   };
 
   try {
-    // API 요청 시도
     const response = await axiosInstance.post(APIs.DELETE_MATCH, requestData);
     Dialog.create({
       title: "알림 ",
@@ -409,6 +411,7 @@ const handleError = (error) => {
 
 // 컴포넌트가 마운트될 때 실행
 onMounted(async () => {
+  //각 상황별 버튼 활성화를 위한 세팅
   isAdminM.value = sessionContext === "adminm";
   isAdmin.value = sessionContext === "admin";
   await fetchMatches();

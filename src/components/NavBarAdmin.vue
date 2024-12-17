@@ -26,34 +26,6 @@
         :disable="!isLoggedIn"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-      <!-- <q-btn
-        flat
-        round
-        dense
-        label="입찰현황 및 낙찰진행"
-        @click="handleClickAction('bids')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-        v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
-
-      <!-- <q-btn
-        flat
-        round
-        dense
-        label="대회승인"
-        @click="handleClickAction('approveMatch')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
-      <!-- <q-btn
-        flat
-        round
-        dense
-        label="좌석가격입력"
-        @click="handleClickAction('updateSeatPrice')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-        v-if="$q.screen.gt.md"
-      />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -->
       <q-btn
         flat
         round
@@ -94,29 +66,6 @@
       >
         <q-item-section>경기장 선택</q-item-section>
       </q-item>
-      <!-- <q-item
-        clickable
-        @click="handleClickAction('bids')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-      >
-        <q-item-section>입찰현황 및 낙찰진행</q-item-section>
-      </q-item> -->
-
-      <!-- <q-item
-        clickable
-        @click="handleClickAction('approveMatch')"
-        :disable="!isLoggedIn"
-      >
-        <q-item-section>대회승인</q-item-section>
-      </q-item> -->
-
-      <!-- <q-item
-        clickable
-        @click="handleClickAction('updateSeatPrice')"
-        :disable="!isLoggedIn || !hasSelectedMatch"
-      >
-        <q-item-section>좌석가격입력</q-item-section>
-      </q-item> -->
 
       <q-item
         clickable
