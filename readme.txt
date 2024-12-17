@@ -35,7 +35,11 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 -	이를 이용하여 사용자 정보 수정, 비밀번호 변경 작업을 수행한다.
 
 회원가입
+<<<<<<< HEAD
 -	전화번호를 입력하고 인증번호를 발송 후 입력 내용을 제출한다.
+=======
+-	전화번호를 입력하고 인증번호를 발송 후 입력 내용을 제출한다. 
+>>>>>>> eaade2d525e04ace4637854f5821b65a0301953f
 
 
 -	비밀번호 찾기 프로그램은 전화번호 입력을 하고 재설정을 하도록 되어있다.
@@ -89,7 +93,11 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 
 경기장 선택(SelectVenue), 대회선택(SelectMatch)
   대회선택(SelectMatch) 화면에서 대회리스트 옆에 상황에 맞는 버튼이 나타난다.
+<<<<<<< HEAD
   첨부보기 승인, 승인취소, 가격입력(UpdateSeatPrice), 일괄입찰(일괄입찰이 등록된 경우 나타남, reserveMatchAdmin)을 click하면 일괄입찰내용이 보이고 승인할 수 있다.
+=======
+  첨부보기 승인, 승인취소, 가격입력(UpdateSeatPrice), 일괄입찰(일괄입찰이 등록된 경우 나타남, reserveMatchAdmin)을 click하면 일괄입찰내용이 보이고 승인할 수 있다. 
+>>>>>>> eaade2d525e04ace4637854f5821b65a0301953f
   대회 전체를 click하면 입찰현황 및 낙찰진행으로 이동한다.
 
 입찰현황 및 낙찰진행(BidResults)
