@@ -111,7 +111,7 @@
               color="primary"
               label="일괄 입찰"
               v-if="
-                // isAdmin &&
+                isAdmin &&
                 // match.is_bid_available === 'N' &&
                 // match.approved === 'Y' &&
                 // match.bid_status_code === 'BEFORE_OPEN' &&

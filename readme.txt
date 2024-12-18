@@ -1,4 +1,4 @@
-git init;git add .;git commit -m '1217' ;git push origin master
+git init;git add .;git commit -m '1217-1' ;git push origin master
 
 운영 환경
 ========
@@ -25,7 +25,7 @@ inicis결제요청 중 netcancel 상황이 발생하지 않아 현재 루틴은 
 . jwtFilter.java ;
 Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기숳하면 작동하지 않는 경우가 있음.
 
-. 현재 테스트 전화번호를 임의로 넣도록 응답메시지에 인증코드가 보여진다.
+. 인증코드 전송이 필요한 경우 테스트 전화번호를 임의로 넣을 수 있도록록 응답메시지에 인증코드가 보여지고 실제 전송루틴은 주석으로 처리됨.
 . 회원 가입시, 전화번호(key)와 이메일은 중복을 허용하지 않는다.
 
 입찰사용자
@@ -74,7 +74,7 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 대회 등록 관리자 로그인
 =====================
 -	주소 : http://localhost:9000/adminm/adminmlogin
--	일반관리자 33333333333(11자리) 비밀번호 333(사용자 role ‘adminm)
+-	일반관리자 33333333333(11자리) 비밀번호 333(사용자 role ‘adminm) 또는 44444444444 444
 (이외의 사용자는 권한이 없다는 메시지가 뜸)
 
 경기장 선택(SelectVenue), 대회선택(SelectMatch)

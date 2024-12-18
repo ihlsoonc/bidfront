@@ -43,22 +43,37 @@
         label="입찰 제출"
       />&nbsp;&nbsp;
       <q-btn
+        :class="{ active: isActive }"
+        :color="showSeatDetails ? 'grey' : 'primary'"
         @click="handleShowDetail"
-        color="secondary"
         label="좌석별 가격 보기"
       />
     </div>
-    <!-- 좌석별 가격 리스트 -->
-    <q-list v-if="showSeatDetails" bordered class="rounded-borders q-mt-md">
-      <q-item v-for="seat in seatPrices" :key="seat.seat_no">
-        <q-item-section>
-          <div>
-            좌석번호 : {{ seat.seat_no }} ({{ seat.row_no }} 열
-            {{ seat.col_no }}번) {{ seat.seat_price }}원
-          </div>
-        </q-item-section>
-      </q-item>
-    </q-list>
+    <div v-if="showSeatDetails">
+      <!-- 좌석 정보 리스트 -->
+      <q-list
+        v-if="seatPrices && seatPrices.length > 0"
+        bordered
+        class="rounded-borders q-mt-md"
+      >
+        <q-item v-for="seat in seatPrices" :key="seat.seat_no">
+          <q-item-section>
+            <div>
+              좌석번호 : {{ seat.seat_no }} ({{ seat.row_no }} 열
+              {{ seat.col_no }}번) {{ seat.seat_price }}원
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+      <!-- 좌석 정보가 없을 때 -->
+      <q-card v-else flat bordered class="q-pa-md q-mt-md text-center">
+        <q-card-section>좌석 정보가 없습니다.</q-card-section>
+      </q-card>
+    </div>
+
+    <q-card v-if="message">
+      <q-banner color="deep-orange-14">{{ message }}</q-banner>
+    </q-card>
   </q-page>
 </template>
 
@@ -74,8 +89,6 @@ import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 
-const BID_OPEN = "입찰 진행중";
-
 let matchNumber = 0;
 const sessionContext = getSessionContext();
 const localSessionData = fetchSessionData(sessionContext, [
@@ -86,7 +99,6 @@ const localSessionData = fetchSessionData(sessionContext, [
 
 const router = useRouter();
 
-const isClosedBid = ref(false);
 const seatPrices = ref([]);
 const totalSeatPrice = ref(0);
 const totalSeatCount = ref(0);
@@ -102,7 +114,7 @@ let alreadyReserved = false;
 let prevBidAmount = 0;
 
 const handleShowDetail = () => {
-  showSeatDetails.value = !showSeatDetails.value; // 표시 여부 토글
+  showSeatDetails.value = !showSeatDetails.value;
 };
 
 const fetchBidStatus = async (matchNumber) => {
@@ -115,11 +127,6 @@ const fetchBidStatus = async (matchNumber) => {
     bidStatus.value = response.data;
     alreadyReserved = bidStatus.value.reserved === "Y";
     prevBidAmount = bidStatus.value.reserved_amount;
-    // 입찰 상태가 "입찰 진행중"인지 확인
-    if (response.data.bid_status_name !== BID_OPEN) {
-      isClosedBid.value = true;
-    } else {
-    }
   } catch (error) {
     handleError(error);
   }
@@ -293,6 +300,7 @@ const handleError = (error) => {
     });
     navigate(router, sessionContext, "login"); // 로그인 화면으로 이동
   } else {
+    console.log("================", error.response.data);
     if (error.response) {
       message.value = error.response.data;
     } else if (error.request) {
@@ -317,12 +325,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Quasar 스타일을 사용하지만, 필요시 기본 스타일을 추가로 적용 */
-.accordion-content {
-  background-color: #f1f1f1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  margin-top: 5px;
-  border-radius: 5px;
+.active {
+  border: 2px solid #1976d2;
 }
 </style>

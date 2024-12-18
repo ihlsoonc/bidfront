@@ -7,12 +7,8 @@
       <q-input
         v-model="searchQuery"
         label="전화번호"
-        placeholder="전화번호를 입력하세요."
         outlined
-        minlength="11"
-        maxlength="11"
-        autocomplete="tel"
-        :readonly="updateMode"
+        readonly
         class="q-mb-md"
       />
 
@@ -289,9 +285,10 @@ const resetLoginStatus = () => {
 // onMounted에서 테이블 이름 설정
 onMounted(async () => {
   if (localSessionData.telno) {
-    userData.value.query = localSessionData.telno;
+    searchQuery.value = localSessionData.telno;
   }
-  passwordMsg.value = "사용자 정보 수정을 위해 비밀번호를 입력해주세요.";
+  password.value = "   ";
+  message.value = "정보 수정을 위해 비밀번호를 다시한번 입력해주세요.";
 });
 </script>
 

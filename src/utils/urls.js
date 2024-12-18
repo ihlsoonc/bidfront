@@ -84,6 +84,5 @@ export const url = reactive({
   bids: {
     user: `bidSeats`,
     admin: `bidResultsAdmin`,
-    adminm: `manageMatchAdminM`,
   },
 });
