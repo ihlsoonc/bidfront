@@ -1,4 +1,4 @@
-git init;git add .;git commit -m '1217-1' ;git push origin master
+git init;git add .;git commit -m '1218' ;git push origin master
 
 운영 환경
 ========
@@ -15,6 +15,7 @@ DB start:port 3306
 -Inicis PC 결제 호출 후 세션 끊어짐, 모발의 경우 간혹 안 끊어지는 경우가 있음
 -Inicis 호출을 위한 서버 jsp에서 css include가 되지 않음.
 - 이니시스 네이버페이 결제시 오류
+
 -	알림톡 토큰 획득시 오류 메시지 : ip가 권한없음
 
 참고사항

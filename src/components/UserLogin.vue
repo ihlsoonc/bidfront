@@ -166,12 +166,13 @@ const validateInput = () => {
 };
 
 // 세션 로그인 상태 초기화
-const resetLoginStatus = () =>
-  emit("update-status", {
-    isLoggedIn: false,
-    hasSelectedMatch: false,
-    username: "",
-  });
+const resetLoginStatus = () => (userData.value.query = localSessionData.telno);
+userData.value.password = "   ";
+emit("update-status", {
+  isLoggedIn: false,
+  hasSelectedMatch: false,
+  username: " ",
+});
 
 const setLoggedIn = () =>
   emit("update-status", {

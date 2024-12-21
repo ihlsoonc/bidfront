@@ -46,12 +46,12 @@
           class="q-mb-md"
           @change="handleEmailChange"
         />
-        <q-btn
+        <!-- <q-btn
           label="이메일 유효 확인"
           color="primary"
           @click="validateEmail"
           class="q-mb-md"
-        />
+        /> -->
 
         <q-input
           v-model="userData.postcode"
@@ -94,6 +94,7 @@ import { useRouter } from "vue-router";
 import axiosInstance from "../utils/axiosInterceptor";
 import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
+import { validateEmail } from "../utils/validateEmail";
 import { messageCommon } from "../utils/messageCommon";
 import { navigate } from "../utils/navigate";
 
@@ -106,7 +107,6 @@ const searchQuery = ref(""); // 검색어 (사용자 ID 또는 전화번호)
 const password = ref(""); // 비밀번호
 const updateMode = ref(false);
 const isValidEmail = ref(false);
-const isExistingEmail = ref(false);
 const userData = ref(null); // 조회된 사용자 정보
 const passwordMsg = ref(""); // 비밀번호 관련 메시지
 const message = ref(""); // 상태 메시지
@@ -140,6 +140,7 @@ const handleSearch = async () => {
 
 // 사용자 정보 수정 함수
 const handleUpdate = async () => {
+  console.log("=================", !validateInput(userData));
   if (!validateInput(userData)) return;
 
   try {
@@ -157,68 +158,17 @@ const handleUpdate = async () => {
 };
 
 // 이메일 유효 확인 및 수정 처리
-const handleEmailChange = () => {
+const handleEmailChange = async () => {
   isValidEmail.value = false;
-};
-
-// 이메일 인증 관련 함수
-const validateEmail = async () => {
-  if (!validateEmailPattern()) return;
-  await checkDuplicateEmail();
-
-  if (isExistingEmail.value) {
-    alert("등록된 이메일이 있습니다. 다시 입력해주세요.");
-    message.value = "";
-    isValidEmail.value = false;
-    return;
-  }
-  message.value = "사용가능한 이메일입니다.";
-  isValidEmail.value = true;
-};
-
-const validateEmailPattern = () => {
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(userData.value.email)) {
-    alert("유효하지 않은 이메일 형식입니다. 확인해 주세요.");
-    return false;
-  }
-  return true;
-};
-
-const checkDuplicateEmail = async () => {
-  try {
-    const response = await axiosInstance.post(APIs.GET_EMAIL_COUNT, {
-      telno: userData.value.telno,
-      email: userData.value.email,
-    });
-    let emailCount = response.data.email_count;
-    if (emailCount > 0) {
-      isExistingEmail.value = true;
-    } else {
-      isExistingEmail.value = false;
-    }
-  } catch (error) {
-    handleError(error);
-  }
+  // 이메일 검증
 };
 
 // 입력값 검증 함수
-const validateInput = (userData) => {
+const validateInput = async (userData) => {
   const { username, email, telno, postcode } = userData.value;
 
   if (!username || username.trim() === "") {
     alert("사용자 이름을 입력해 주세요.");
-    return false;
-  }
-
-  if (!telno) {
-    alert("전화번호를 입력해 주세요.");
-    return false;
-  }
-
-  const telnoPattern = /^\d{10,11}$/;
-  if (!telnoPattern.test(telno)) {
-    alert("전화번호는 10자리 또는 11자리 숫자여야 합니다.");
     return false;
   }
 
@@ -227,8 +177,13 @@ const validateInput = (userData) => {
     return false;
   }
 
-  if (!isValidEmail.value) {
-    alert("이메일 유효 확인을 해주세요.");
+  const result = await validateEmail(
+    userData.value.email,
+    userData.value.telno
+  );
+
+  if (!result.success) {
+    alert("return");
     return false;
   }
 
@@ -272,14 +227,6 @@ const handleError = (error) => {
 const handleReset = () => {
   updateMode.value = false;
   message.value = "";
-};
-
-const handleBackToLogin = () => {
-  navigate(router, sessionContext, "login");
-};
-
-const resetLoginStatus = () => {
-  emit("update-status", { isLoggedIn: false, hasSelectedMatch: false });
 };
 
 // onMounted에서 테이블 이름 설정

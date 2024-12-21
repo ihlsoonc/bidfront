@@ -17,7 +17,11 @@
           :disabled="isValidTelno"
         />
       </label>
-      <button @click="validateTelno" type="button" :disabled="isValidTelno">
+      <button
+        @click="handleValidateTelno"
+        type="button"
+        :disabled="isValidTelno"
+      >
         인증번호 발송
       </button>
 
@@ -33,7 +37,7 @@
           placeholder="인증번호 6자리를 입력하세요."
           @input="checkAuthNumber"
         />
-        <button @click="validateTelno" type="button">재발송</button>
+        <button @click="handleValidateTelno" type="button">재발송</button>
       </div>
       <!-- 메시지 박스 -->
       <q-banner v-if="message" class="message-box">{{ message }}</q-banner>
@@ -45,7 +49,7 @@
             type="password"
             v-model="userData.password"
             class="input"
-            placeholder="비밀번호를 입력하세요."
+            placeholder="비밀번호를 입력하세요.(영문과 숫자로 구성된 6자리 이상)"
             autocomplete="new-password"
           />
         </label>
@@ -55,7 +59,7 @@
             type="password"
             v-model="userData.password2"
             class="input"
-            placeholder="비밀번호를 다시 입력하세요."
+            placeholder="비밀번호를 다시 입력하세요.(영문과 숫자로 구성된 6자리 이상)"
             autocomplete="new-password"
             @input="checkPassword"
           />
@@ -71,7 +75,7 @@
             autocomplete="name"
           />
         </label>
-
+        <!-- @update:model-value="validatePassword" -->
         <label>
           이메일:
           <input
@@ -83,7 +87,7 @@
             @input="resetEmailStatus"
           />
         </label>
-        <q-btn @click="validateEmail" type="button"> 이메일 유효 확인 </q-btn>
+        <!-- <q-btn @click="validateEmail" type="button"> 이메일 유효 확인 </q-btn> -->
 
         <label>
           우편번호:
@@ -129,11 +133,13 @@
 </template>
 
 <script setup>
-import axios from "axios";
 import qs from "qs";
 import axiosInstance from "../utils/axiosInterceptor";
 import { ref } from "vue";
 import { getSessionContext } from "../utils/sessionFunctions";
+import { validateNewPassword } from "../utils/validateNewPassword";
+import { validateEmail } from "../utils/validateEmail";
+import { validateTelno } from "../utils/validateTelno";
 import { APIs } from "../utils/APIs";
 import { messageCommon } from "../utils/messageCommon";
 const sessionConext = getSessionContext();
@@ -152,21 +158,16 @@ const userData = ref({
   role: "",
 });
 const isValidTelno = ref(false);
-const isExistingTelno = ref(false);
-const isValidEmail = ref(false);
-const isExistingEmail = ref(false);
 const authCodeInputMode = ref(false);
 const message = ref("");
 
-// 전화번호 인증 관련 함수
-const validateTelno = async () => {
-  if (!validateTelnoPattern()) return;
-  await checkDuplicateTelno();
+// 전화번호 중복을 확인하고 인증 번호를 보냄.
+const handleValidateTelno = async () => {
+  // 비밀번호 검증
 
-  if (isExistingTelno.value) {
-    alert("등록된 전화번호가 있습니다. 다시 입력해주세요.");
-    message.value = "";
-    isValidTelno.value = false;
+  const result = await validateTelno(userData.value.telno);
+  if (!result.success) {
+    alert(result.message); // 검증 실패 메시지 출력
     return;
   }
 
@@ -185,29 +186,9 @@ const validateTelno = async () => {
   }
 };
 
-// 전화번호 인증 관련 함수
-const validateEmail = async () => {
-  if (!validateEmailPattern()) return;
-  await checkDuplicateEmail();
-
-  if (isExistingEmail.value) {
-    alert("등록된 이메일이 있습니다. 다시 입력해주세요.");
-    message.value = "";
-    isValidEmail.value = false;
-    return;
-  }
-  alert("사용 가능한 이메일입니다.");
-  isValidEmail.value = true;
-};
-
 const resetTelnoStatus = () => {
   message.value = "전화번호가 변경되었습니다. 인증번호 발송을 눌러주세요.";
   isValidTelno.value = false;
-};
-
-const resetEmailStatus = () => {
-  message.value = "이메일이 변경되었습니다. 이메일확인을 눌러주세요.";
-  isValidEmail.value = false;
 };
 
 const checkAuthNumber = () => {
@@ -231,54 +212,33 @@ const compareAuthNumber = async () => {
   }
 };
 
-const checkDuplicateTelno = async () => {
-  try {
-    const response = await axiosInstance.post(APIs.GET_TELNO_COUNT, {
-      telno: userData.value.telno,
-    });
-    let telnoCount = response.data.telno_count;
-    if (telnoCount > 0) {
-      isExistingTelno.value = true;
-    } else {
-      message.value = "사용가능한 전화번호입니다.";
-      isExistingTelno.value = false;
-    }
-  } catch (error) {
-    isExistingTelno.value = false;
-    handleError(error);
-  }
-};
-
-const checkDuplicateEmail = async () => {
-  try {
-    const response = await axiosInstance.post(APIs.GET_EMAIL_COUNT, {
-      telno: userData.value.telno,
-      email: userData.value.email,
-    });
-    let emailCount = response.data.email_count;
-    if (emailCount > 0) {
-      isExistingEmail.value = true;
-    } else {
-      message.value = "사용가능한 이메일입니다.";
-      isExistingEmail.value = false;
-    }
-  } catch (error) {
-    isExistingEmail.value = false;
-    handleError(error);
-  }
-};
-
 const cancelSubmit = async () => {
   isValidTelno.value = false;
   message.value = "";
 };
+
 // 제출 함수
 const handleSubmit = async () => {
-  if (!isValidEmail.value) {
-    alert("이메일 유효확인을 해주세요");
+  if (!checkNull()) return;
+
+  // 비밀번호 검증
+  const result1 = validateNewPassword(userData.value.password);
+  if (result1.isValid) {
+  } else {
+    alert(result1.message); // 검증 실패 메시지 출력
     return;
   }
-  if (!validateInput()) return;
+
+  // 이메일 검증
+  const result2 = await validateEmail(
+    userData.value.email,
+    userData.value.telno
+  );
+  if (result2.isValid) {
+  } else {
+    alert(result2.message); // 검증 실패 메시지 출력
+    return;
+  }
 
   userData.value.role = sessionConext;
   try {
@@ -301,10 +261,12 @@ const handleSubmit = async () => {
     handleError(error);
   }
 };
-const validateInput = () => {
+
+const checkNull = () => {
   const { password, password2, username } = userData.value;
   if (!password) {
-    message.value = "비밀번호를 입력해 주세요.";
+    message.value =
+      "비밀번호를 입력해 주세요. (영문과 숫자로 구성된 6자리 이상)";
     return false;
   }
   if (!password2) {
@@ -333,23 +295,6 @@ const checkPassword = () => {
     message.value = "비밀번호가 일치하지 않습니다.";
     return false;
   }
-};
-
-const validateTelnoPattern = () => {
-  const telnoPattern = /^\d{10,11}$/;
-  if (!telnoPattern.test(userData.value.telno)) {
-    alert("전화번호는 11자리 숫자로 입력해 주세요.");
-    return false;
-  }
-  return true;
-};
-const validateEmailPattern = () => {
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(userData.value.email)) {
-    alert("유효하지 않은 이메일 형식입니다. 확인해 주세요.");
-    return false;
-  }
-  return true;
 };
 
 function resetUserData() {
