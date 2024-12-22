@@ -140,8 +140,10 @@ const handleSearch = async () => {
 
 // 사용자 정보 수정 함수
 const handleUpdate = async () => {
-  console.log("=================", !validateInput(userData));
-  if (!validateInput(userData)) return;
+  const emailValidateionResult = await validateInput(userData);
+  if (!emailValidateionResult) {
+    return;
+  }
 
   try {
     const response = await axiosInstance.post(APIs.UPDATE_USER, {
@@ -183,7 +185,7 @@ const validateInput = async (userData) => {
   );
 
   if (!result.success) {
-    alert("return");
+    alert(result.message);
     return false;
   }
 

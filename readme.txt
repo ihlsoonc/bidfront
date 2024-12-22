@@ -1,4 +1,4 @@
-git init;git add .;git commit -m '1218' ;git push origin master
+git init;git add .;git commit -m '1222' ;git push origin master
 
 운영 환경
 ========
@@ -14,9 +14,8 @@ DB start:port 3306
 ======
 -Inicis PC 결제 호출 후 세션 끊어짐, 모발의 경우 간혹 안 끊어지는 경우가 있음
 -Inicis 호출을 위한 서버 jsp에서 css include가 되지 않음.
-- 이니시스 네이버페이 결제시 오류
-
--	알림톡 토큰 획득시 오류 메시지 : ip가 권한없음
+- 이니시스 네이버페이 결제시 오류(카드, 카카오페이, 토스 페이 등은 됨 아마 localhot:5000이 등록되야할지도??)
+-	알림톡 토큰 획득시 오류 메시지 : ip가 권한 없음 오류류
 
 참고사항
 =======
@@ -25,11 +24,10 @@ inicis결제요청 중 netcancel 상황이 발생하지 않아 현재 루틴은 
 . java application용 세팅은 application.yml에 정의되어 있음.(알림톡, 이니시스, SMS , jwt유효기간 등)
 . jwtFilter.java ;
 Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기숳하면 작동하지 않는 경우가 있음.
-
 . 인증코드 전송이 필요한 경우 테스트 전화번호를 임의로 넣을 수 있도록록 응답메시지에 인증코드가 보여지고 실제 전송루틴은 주석으로 처리됨.
 . 회원 가입시, 전화번호(key)와 이메일은 중복을 허용하지 않는다.
 
-입찰사용자
+입찰사용자(모든 권한 사용가능능)
 =========
 로그인(Login)
 -	주소 : http://localhost:9000/userlogin
@@ -37,13 +35,8 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 -	이를 이용하여 사용자 정보 수정, 비밀번호 변경 작업을 수행한다.
 
 회원가입
-<<<<<<< HEAD
--	전화번호를 입력하고 인증번호를 발송 후 입력 내용을 제출한다.
 =======
 -	전화번호를 입력하고 인증번호를 발송 후 입력 내용을 제출한다.
->>>>>>> eaade2d525e04ace4637854f5821b65a0301953f
-
-
 -	비밀번호 찾기 프로그램은 전화번호 입력을 하고 재설정을 하도록 되어있다.
 
 경기장선택(SelectVenue) 및 대회선택(SelectMatch)
@@ -69,10 +62,10 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 -	현재 test를 위하여 반복하여 결제를 할 수 있다. 현재 카카오머니, 현대카드 하나카드 등으로 테스트 가능, 결제한 내용은 밤에 일괄적으로 취소된다.
 -	결제창은 기기에 따라 모바일결제창 혹은 PC결제창이 뜸
 -	function isMobile() {
--	  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
--	}
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  }
  
-대회 등록 관리자 로그인
+대회 등록 관리자 로그인(권한 adminm)
 =====================
 -	주소 : http://localhost:9000/adminm/adminmlogin
 -	일반관리자 33333333333(11자리) 비밀번호 333(사용자 role ‘adminm) 또는 44444444444 444
@@ -89,17 +82,13 @@ Filer를 skip할 url은 jwtFilter.java에 기술됨… securitConfig에서 기�
 -	툴바에서 선택하여 등록한다.
 -	승인된 경기는 수정할 수 없으며 총괄관리자가 승인을 취소하면 대회 정보의 변경이 가능
  
-총괄 관리자 로그인
+총괄 관리자 로그인(권한 admin)
 =================
 -	http://localhost:9000/admin/adminlogin
 
 경기장 선택(SelectVenue), 대회선택(SelectMatch)
   대회선택(SelectMatch) 화면에서 대회리스트 옆에 상황에 맞는 버튼이 나타난다.
-<<<<<<< HEAD
   첨부보기 승인, 승인취소, 가격입력(UpdateSeatPrice), 일괄입찰(일괄입찰이 등록된 경우 나타남, reserveMatchAdmin)을 click하면 일괄입찰내용이 보이고 승인할 수 있다.
-=======
-  첨부보기 승인, 승인취소, 가격입력(UpdateSeatPrice), 일괄입찰(일괄입찰이 등록된 경우 나타남, reserveMatchAdmin)을 click하면 일괄입찰내용이 보이고 승인할 수 있다.
->>>>>>> eaade2d525e04ace4637854f5821b65a0301953f
   대회 전체를 click하면 입찰현황 및 낙찰진행으로 이동한다.
 
 입찰현황 및 낙찰진행(BidResults)
