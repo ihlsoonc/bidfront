@@ -10,7 +10,7 @@ CREATE TABLE `bids` (
   `bid_won` varchar(1) DEFAULT 'N', -- 낙찰 여부 ('Y', 'N')
   `bid_paid` varchar(1) DEFAULT 'N', -- 결제 여부 ('Y', 'N')
   `pay_method` varchar(45) DEFAULT NULL, -- 결제 방법
-  `bid_userid` varchar(15) DEFAULT NULL, -- 입찰자 아이디(현재 전화번호호)
+  `bid_userid` varchar(15) DEFAULT NULL, -- 입찰자 아이디(현재 전화번호)
   `row_no` int(11) DEFAULT NULL, -- 좌석 행 번호
   `col_no` int(11) DEFAULT NULL, -- 좌석 열 번호
   `pay_oid` varchar(45) DEFAULT NULL -- 결제 고유 ID(inicis 결제 요청시 생성된 번호 기록)
@@ -23,7 +23,7 @@ CREATE TABLE `biduser` (
   `username` varchar(30) NOT NULL, -- 사용자 이름
   `email` varchar(45) DEFAULT NULL, -- 이메일
   `telno` varchar(20) NOT NULL, -- 전화번호
-  `postcode` varchar(10) DEFAULT NULL, -- 우편번호
+  `postcode` varchar(5) DEFAULT NULL, -- 우편번호
   `addr1` varchar(45) DEFAULT NULL, -- 기본 주소
   `addr2` varchar(45) DEFAULT NULL, -- 상세 주소
   `created_at` datetime DEFAULT NULL, -- 생성 날짜
@@ -168,6 +168,6 @@ CREATE TABLE `venue_code` (
   `venue_name` varchar(45) DEFAULT NULL, -- 경기장 이름
   `venue_place_info` varchar(45) DEFAULT NULL, -- 경기장 장소 정보
   `venue_general_info` varchar(45) DEFAULT NULL, -- 경기장 일반 정보
-  `venue_img_file` varchar(100) DEFAULT NULL, -- 경기장 이미지 파일 이름름
+  `venue_img_file` varchar(100) DEFAULT NULL, -- 경기장 이미지 파일 이름
   PRIMARY KEY (`venue_cd`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
