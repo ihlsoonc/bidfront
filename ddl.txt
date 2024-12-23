@@ -13,12 +13,12 @@ CREATE TABLE `bids` (
   `bid_userid` varchar(15) DEFAULT NULL, -- 입찰자 아이디(현재 전화번호호)
   `row_no` int(11) DEFAULT NULL, -- 좌석 행 번호
   `col_no` int(11) DEFAULT NULL, -- 좌석 열 번호
-  `pay_oid` varchar(45) DEFAULT NULL -- 결제 고유 ID(inicis 결제 요청시 생성된 번호 기록록)
+  `pay_oid` varchar(45) DEFAULT NULL -- 결제 고유 ID(inicis 결제 요청시 생성된 번호 기록)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 입찰 사용자
 CREATE TABLE `biduser` (
-  `userid` varchar(30) DEFAULT NULL, -- 사용자 ID (현재는 사용하지 않음음)
+  `userid` varchar(30) DEFAULT NULL, -- 사용자 ID (현재는 사용하지 않음)
   `password` varchar(100) NOT NULL, -- 비밀번호
   `username` varchar(30) NOT NULL, -- 사용자 이름
   `email` varchar(45) DEFAULT NULL, -- 이메일
@@ -27,7 +27,7 @@ CREATE TABLE `biduser` (
   `addr1` varchar(45) DEFAULT NULL, -- 기본 주소
   `addr2` varchar(45) DEFAULT NULL, -- 상세 주소
   `created_at` datetime DEFAULT NULL, -- 생성 날짜
-  `usertype` varchar(1) DEFAULT 'U', -- 사용자 유형 ('U': 일반 사용자, 현재는 사용하지 않음음)
+  `usertype` varchar(1) DEFAULT 'U', -- 사용자 유형 ('U': 일반 사용자, 현재는 사용하지 않음, role을 이용함)
   `id` bigint(20) NOT NULL AUTO_INCREMENT, -- 고유 ID
   `role` varchar(10) DEFAULT NULL, -- 사용자 역할
   PRIMARY KEY (`id`),
@@ -41,7 +41,7 @@ CREATE TABLE `matches` (
   `match_name` varchar(100) NOT NULL, -- 경기 이름
   `round` varchar(100) NOT NULL, -- 라운드 이름
   `approved` varchar(1) NOT NULL DEFAULT 'N', -- 승인 여부 ('Y', 'N')
-  `bid_open_status` varchar(1) DEFAULT 'I', -- 입찰 오픈 상태 ('I': 준비 중. 'F' 낙찰완료 )
+  `bid_open_status` varchar(1) DEFAULT 'I', -- 입찰 오픈 상태 ('I': 준비 중. 'F' 낙찰완료, 나머지 상태는 입찰 시작시간 종료시간을 기준으로 결정됨 )
   `alimtalk_sent` varchar(1) DEFAULT 'N', -- 알림톡 발송 여부 ('Y', 'N')
   `bid_open_datetime` datetime DEFAULT NULL, -- 입찰 시작 시간
   `bid_close_datetime` datetime DEFAULT NULL, -- 입찰 종료 시간
@@ -49,10 +49,10 @@ CREATE TABLE `matches` (
   `start_date` date DEFAULT NULL, -- 경기 시작 날짜
   `start_time` time DEFAULT NULL, -- 경기 시작 시간
   `end_time` time DEFAULT NULL, -- 경기 종료 시간
-  `approved_by` varchar(12) DEFAULT NULL, -- 승인자
-  `created_by` varchar(11) NOT NULL DEFAULT 'null', -- 생성자
+  `approved_by` varchar(11) DEFAULT NULL, -- 승인자(전화번호)
+  `created_by` varchar(11) NOT NULL DEFAULT 'null', -- 생성자(전화번호)
   `is_bid_available` varchar(1) DEFAULT 'N', -- 입찰 가능 여부 ('Y', 'N')
-  `filename_attached` varchar(200) DEFAULT NULL, -- 첨부 파일 이름
+  `filename_attached` varchar(200) DEFAULT NULL, -- 첨부 파일 이름(사용자 화일명에 random number가 추가되어 전송됨 randomnumber_화일명 형식으로)
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), -- 수정 시간
   `updated_by` varchar(11) DEFAULT NULL, -- 수정자 전화번호
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(), -- 생성 시간
@@ -65,11 +65,11 @@ CREATE TABLE `matches` (
   PRIMARY KEY (`match_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- inicis 결제 요청 및 승인 기록 테이블
+-- inicis 결제 요청 및 승인 기록 테이블 (mobile과 PC로 결제 여부에 따라 null이 되는 경우가 많음)
 CREATE TABLE `payments` (
   `payDevice` varchar(20) DEFAULT NULL, -- 결제 장치(mobile, PC)
   `P_OID` varchar(50) DEFAULT NULL, -- 주문 번호
-  `P_TRAN_TYPE` varchar(1) DEFAULT NULL, -- 거래 유형
+  `P_TRAN_TYPE` varchar(1) DEFAULT NULL, -- 거래 유형 - 'R':결제 요청정보 'A'결제 승인정보
   `P_AUTH_DT` varchar(45) DEFAULT NULL, -- 인증 날짜
   `P_AUTH_NO` varchar(20) DEFAULT NULL, -- 인증 번호
   `P_UNAME` varchar(50) DEFAULT NULL, -- 사용자 이름
