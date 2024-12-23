@@ -105,11 +105,6 @@ const routes = [
         path: "updateseatpriceadmin",
         component: () => import("components/UpdateSeatPrice.vue"),
       }, // 좌석 가격 수정
-      {
-        name: "approveReserveMatch",
-        path: "approvereservematch",
-        component: () => import("components/ApproveReserveMatch.vue"),
-      }, // 좌석 가격 수정
     ],
   },
   {
