@@ -1,7 +1,7 @@
 <template>
   <q-header elevated>
     <q-toolbar>
-      <!-- 모바일에서는 햄버거 버튼 -->
+      <!-- 모바일: 햄버거 버튼 -->
       <q-btn
         flat
         round
@@ -10,57 +10,66 @@
         @click="toggleDrawer"
         v-if="$q.screen.lt.md"
       />
+
+      <!-- 타이틀 -->
       <q-toolbar-title>
         입찰 등록 및 결제 시스템
-        <!-- 로그인된 경우 사용자 이름 표시 -->
-        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+        <span
+          v-if="username && username.trim() !== ''"
+          style="font-size: 14px; display: inline-block; margin-left: 8px"
+          >- {{ username }}님</span
+        >
       </q-toolbar-title>
 
-      <!-- 데스크탑에서만 버튼 표시 -->
-      <q-btn
-        flat
-        round
-        dense
-        label="경기장 선택"
-        @click="handleClickAction('selectVenue')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        label="사용자정보수정"
-        @click="handleClickAction('updateUser')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;
-      <q-btn
-        flat
-        round
-        dense
-        icon="home"
-        @click="handleClickAction('login')"
-        v-if="$q.screen.gt.md"
-      />
-      &nbsp;&nbsp;&nbsp;&nbsp;
+      <!-- 데스크톱: 버튼 -->
+      <q-space />
+      <div v-if="$q.screen.gt.md">
+        <q-btn
+          flat
+          round
+          dense
+          label="경기장 선택"
+          @click="handleClickAction('selectVenue')"
+          :disable="!isLoggedIn"
+        />&nbsp;&nbsp;&nbsp;
+        <q-btn
+          flat
+          round
+          dense
+          label="사용자정보수정"
+          @click="handleClickAction('updateUser')"
+          :disable="!isLoggedIn"
+        />&nbsp;&nbsp;&nbsp;
 
-      <q-btn
-        flat
-        round
-        dense
-        label="로그아웃"
-        icon="logout"
-        @click="handleClickAction('logout')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
-      />
+        <q-btn
+          flat
+          round
+          dense
+          icon="home"
+          @click="handleClickAction('home')"
+        />&nbsp;&nbsp;&nbsp;
+        <q-btn
+          flat
+          round
+          dense
+          label="로그인"
+          v-if="!isLoggedIn"
+          @click="handleClickAction('login')"
+        />
+        <q-btn
+          flat
+          round
+          dense
+          icon="logout"
+          label="로그아웃"
+          v-if="isLoggedIn"
+          @click="handleClickAction('logout')"
+        />
+      </div>
     </q-toolbar>
   </q-header>
 
-  <!-- 모바일용 드로어 (사이드 메뉴) -->
+  <!-- 모바일: 드로어 -->
   <q-drawer v-model="leftDrawerOpen" side="left" bordered>
     <q-list>
       <q-item
@@ -69,9 +78,8 @@
         @click="handleClickAction('selectVenue')"
         :disable="!isLoggedIn"
       >
-        <q-item-section>경기장선택</q-item-section>
+        <q-item-section>경기장 선택</q-item-section>
       </q-item>
-
       <q-item
         clickable
         v-ripple
@@ -80,16 +88,22 @@
       >
         <q-item-section>사용자 정보 수정</q-item-section>
       </q-item>
-
-      <q-item clickable v-ripple @click="handleClickAction('login')">
+      <q-item clickable v-ripple @click="handleClickAction('home')">
         <q-icon name="home" />홈
       </q-item>
-
+      <q-item
+        v-if="!isLoggedIn"
+        clickable
+        v-ripple
+        @click="handleClickAction('login')"
+      >
+        <q-item-section>로그인</q-item-section>
+      </q-item>
       <q-item
         clickable
         v-ripple
         @click="handleClickAction('logout')"
-        :disable="!isLoggedIn"
+        v-if="isLoggedIn"
       >
         <q-icon name="logout" />로그아웃
       </q-item>
@@ -98,7 +112,7 @@
 </template>
 
 <script setup>
-import { ref, toRefs, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 
 const props = defineProps({
   isLoggedIn: {

@@ -11,8 +11,18 @@
       <q-banner type="warning">{{ message }}</q-banner>
     </q-card-section>
     <q-page-container>
-      <!-- 라우터 뷰를 삽입하고 상태 업데이트 이벤트 처리 -->
-      <router-view @update-status="handleUpdateStatus" />
+      <template v-if="!isToolBarClicked">
+        <!-- 기본 이미지 표시 -->
+        <img
+          src="../assets/images/match02.png"
+          alt="기본 이미지"
+          style="width: 100%; height: auto"
+        />
+      </template>
+      <template v-else>
+        <!-- router-view 표시 -->
+        <router-view @update-status="handleUpdateStatus" />
+      </template>
     </q-page-container>
   </q-layout>
 </template>
@@ -45,11 +55,13 @@ const message = ref("");
 const username = ref(fetchSessionData(sessionContext, ["username"]).username);
 const isLoggedIn = ref(false);
 const hasSelectedMatch = ref(false);
+const isToolBarClicked = ref(false);
 
 // 상태 업데이트 함수
 const handleUpdateStatus = (status) => {
   isLoggedIn.value = status.isLoggedIn; // 로그인 상태 업데이트
   hasSelectedMatch.value = status.hasSelectedMatch; // 경기 선택 상태 업데이트
+  username.value = status.username;
 };
 
 // 로그인 상태 초기화 함수
@@ -88,30 +100,53 @@ const confirmAndLogout = async () => {
   }
 };
 
-// 페이지 이동 처리 함수
 const handleNavigate = async (action) => {
   if (action === "logout") {
-    await confirmAndLogout(); // 로그아웃 처리
+    await confirmAndLogout();
+  } else if (action === "home") {
+    isToolBarClicked.value = false;
   } else {
-    navigate(router, sessionContext, action); // 다른 페이지로 이동
+    isToolBarClicked.value = true;
+    navigate(router, sessionContext, action);
   }
 };
 
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
-};
+  //refresh expired인 경우 400발생
+  if (
+    error.response?.status === 403 ||
+    error.response?.status === 401 ||
+    error.response?.status === 400
+  ) {
+    Dialog.create({
+      title: "알림림",
+      message: "로그아웃 되었습니다..",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
 
-// 초기 세팅
+    clearSessionByContext(sessionContext);
+    resetLoginStatus();
+    navigate(router, sessionContext, "home"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
+};
 onBeforeMount(() => {
   saveSessionContext(sessionContext);
 });
 
 onMounted(() => {
-  handleNavigate("login"); // 초기 로그인 페이지로 이동
+  resetLoginStatus();
 });
 </script>
 

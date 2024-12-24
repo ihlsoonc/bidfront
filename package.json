@@ -18,11 +18,14 @@
     "ag-grid-enterprise": "^32.3.3",
     "ag-grid-vue3": "^32.3.3",
     "axios": "^1.7.7",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
     "quasar": "^2.17.4",
     "uuid": "^11.0.3",
     "vue": "^3.4.18",
     "vue-cookies": "^1.8.4",
-    "vue-router": "^4.0.12"
+    "vue-router": "^4.0.12",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@quasar/app-vite": "^1.9.0",

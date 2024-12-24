@@ -13,16 +13,34 @@
         </q-card>
 
         <div v-else>
-          <h5>경기장 정보</h5>
-          <!-- ag-grid-vue 테이블 -->
-          <ag-grid-vue
-            class="ag-theme-alpine"
-            :rowData="venueArray"
-            :columnDefs="columnDefs"
-            :gridOptions="gridOptions"
-            style="width: 100%; height: 350px"
-            @cellClicked="onCellClicked"
-          ></ag-grid-vue>
+          <q-table
+            :rows="venueArray"
+            :columns="columns"
+            row-key="venue_cd"
+            v-model:pagination="pagination"
+            flat
+            bordered
+            class="q-table-style"
+            @row-click="onRowClick"
+          >
+            <!-- 수정/삭제 버튼 슬롯 -->
+            <template v-slot:body-cell-actions="props">
+              <q-btn
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                @click="handleUpdate(props.row)"
+              />
+              <q-btn
+                flat
+                dense
+                icon="delete"
+                color="negative"
+                @click="handleDelete(props.row)"
+              />
+            </template>
+          </q-table>
         </div>
 
         <q-btn
@@ -31,7 +49,21 @@
           label="신규 경기장 추가"
           class="q-mt-md"
           color="primary"
-        />
+        />&nbsp;&nbsp;
+        <q-btn
+          v-if="!(updateMode || deleteMode || insertMode)"
+          @click="handleSaveToExcel"
+          label="exel로 저장 하기"
+          class="q-mt-md"
+          color="secondary"
+        />&nbsp;&nbsp;
+        <q-btn
+          v-if="!(updateMode || deleteMode || insertMode)"
+          @click="handleSaveToPdf"
+          label="PDF로 저장하기"
+          class="q-mt-md"
+          color="secondary"
+        />&nbsp;&nbsp;
       </q-card-section>
     </q-card>
     <q-card>
@@ -106,9 +138,10 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import { AgGridVue } from "ag-grid-vue3";
-import "ag-grid-community/styles/ag-grid.css"; // ag-grid 기본 스타일
-import "ag-grid-community/styles/ag-theme-alpine.css"; // ag-grid 테마
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import nanumGothicFont from "@/assets/fonts/NanumGothic.js";
 import axiosInstance from "../utils/axiosInterceptor";
 import { getSessionContext, fetchSessionData } from "../utils/sessionFunctions";
 import { APIs } from "../utils/APIs";
@@ -140,86 +173,92 @@ const guideMessage = computed(() => {
   return "";
 });
 
-// ag-grid columnDefs
-const columnDefs = [
-  { headerName: "경기장 코드", field: "venue_cd", flex: 1 },
-  { headerName: "경기장 명", field: "venue_name", flex: 1 },
+// Quasar Table Columns
+const columns = [
+  { name: "venue_cd", align: "left", label: "경기장 코드", field: "venue_cd" },
   {
-    headerName: "위치 정보",
+    name: "venue_name",
+    align: "left",
+    label: "경기장 명",
+    field: "venue_name",
+  },
+  {
+    name: "venue_place_info",
+    align: "left",
+    label: "위치 정보",
     field: "venue_place_info",
-    flex: 2,
-    sortable: false,
   },
   {
-    headerName: "일반 정보",
+    name: "venue_general_info",
+    align: "left",
+    label: "일반 정보",
     field: "venue_general_info",
-    flex: 2,
-    sortable: false,
   },
   {
-    headerName: "수정",
-    field: "edit",
-    cellRenderer: (params) =>
-      `<button class="btn-edit" data-id="${params.data.venue_cd}">수정</button>`,
-    flex: 1,
-    sortable: false,
-  },
-  {
-    headerName: "삭제",
-    field: "delete",
-    cellRenderer: (params) =>
-      `<button class="btn-delete" data-id="${params.data.venue_cd}">삭제</button>`,
-    flex: 1,
+    name: "actions",
+    align: "center",
+    label: "작업",
+    field: "actions",
     sortable: false,
   },
 ];
 
-// ag-grid 옵션
-const gridOptions = {
-  defaultColDef: {
-    resizable: true, // 열 크기 조정 가능
-    // 기본 정렬 활성화
-  },
-  autoSizeStrategy: {
-    type: "fitGridWidth",
-  },
+const pagination = ref({ page: 1, rowsPerPage: 10 });
 
-  pagination: true,
-  paginationPageSizeSelector: [10, 20, 30],
-  rowHeight: 40,
+// 엑셀로 저장하는 함수
+const handleSaveToExcel = () => {
+  // 1. 데이터를 SheetJS의 JSON 형식으로 변환
+  const data = venueArray.value.map((row) => ({
+    "경기장 코드": row.venue_cd,
+    "경기장 명": row.venue_name,
+    "위치 정보": row.venue_place_info,
+    "일반 정보": row.venue_general_info,
+  }));
+
+  // 2. 워크시트 생성
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  // 3. 워크북 생성
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "경기장 정보");
+
+  // 4. Excel 파일 저장
+  XLSX.writeFile(workbook, "경기장_정보.xlsx");
 };
 
-// 버튼 클릭 이벤트 처리
-const onCellClicked = (params) => {
-  const target = params.event.target;
-  const venueCd = target.getAttribute("data-id");
+// PDF로 저장하는 함수
+const handleSaveToPdf = () => {
+  // jsPDF 인스턴스 생성
+  const doc = new jsPDF();
 
-  // 삽입 모드에서는 삭제와 수정 버튼 클릭 무시
-  if (
-    insertMode.value &&
-    (target.classList.contains("btn-edit") ||
-      target.classList.contains("btn-delete"))
-  ) {
-    return;
-  }
+  // 사용자 정의 폰트 추가
+  doc.addFileToVFS("NanumGothic.ttf", nanumGothicFont);
+  doc.addFont("NanumGothic.ttf", "NanumGothic", "normal");
+  doc.setFont("NanumGothic");
 
-  // 수정 모드에서는 삭제 버튼 클릭 무시
-  if (updateMode.value && target.classList.contains("btn-delete")) {
-    return;
-  }
+  // PDF 데이터 작성
+  doc.text("경기장 정보", 10, 10); // 한글 텍스트
 
-  // 삭제 모드에서는 수정 버튼 클릭 무시
-  if (deleteMode.value && target.classList.contains("btn-edit")) {
-    return;
-  }
+  // 테이블 데이터 준비
+  const tableColumns = ["경기장 코드", "경기장 명", "위치 정보", "일반 정보"]; // PDF의 헤더
+  const tableRows = venueArray.value.map((row) => [
+    row.venue_cd,
+    row.venue_name,
+    row.venue_place_info,
+    row.venue_general_info,
+  ]);
 
-  if (target.classList.contains("btn-edit")) {
-    const selectedVenue = venueArray.value.find((v) => v.venue_cd === venueCd);
-    handleUpdate(selectedVenue);
-  } else if (target.classList.contains("btn-delete")) {
-    const selectedVenue = venueArray.value.find((v) => v.venue_cd === venueCd);
-    handleDelete(selectedVenue);
-  }
+  // autoTable로 테이블 추가
+  doc.autoTable({
+    head: [tableColumns], // 헤더 데이터
+    body: tableRows, // 행 데이터
+    startY: 20, // 테이블 시작 위치
+    theme: "striped", // 테이블 스타일 (striped, grid, plain)
+    styles: { font: "NanumGothic", fontSize: 10, cellPadding: 5 }, // 스타일 옵션
+  });
+
+  // PDF 저장
+  doc.save("경기장_정보.pdf");
 };
 
 // const onFileSelected = (event) => {

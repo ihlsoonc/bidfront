@@ -12,8 +12,18 @@
     </q-card-section>
     <!-- 페이지 컨테이너 -->
     <q-page-container>
-      <!-- 라우터 뷰를 삽입하고 상태 업데이트 이벤트 처리 -->
-      <router-view @update-status="handleUpdateStatus" />
+      <template v-if="!isToolBarClicked">
+        <!-- 기본 이미지 표시 -->
+        <img
+          src="../assets/images/match02.png"
+          alt="기본 이미지"
+          style="width: 100%; height: auto"
+        />
+      </template>
+      <template v-else>
+        <!-- router-view 표시 -->
+        <router-view @update-status="handleUpdateStatus" />
+      </template>
     </q-page-container>
   </q-layout>
 </template>
@@ -34,25 +44,26 @@ import {
 } from "../utils/sessionFunctions"; // 세션 설정 유틸리티 함수
 import { messageCommon } from "../utils/messageCommon";
 
+// Quasar와 Vue Router 사용
 const router = useRouter();
 const $q = useQuasar();
 
 // sessionContext : navigation path & localStorate prefix
 const sessionContext = "admin";
 
+// 상태 관리 - 메뉴 버튼 활성화 관리 용
 const message = ref("");
-const username = ref(
+let username = ref(
   fetchSessionData(sessionContext, ["username"])?.username || ""
 );
-
-// 상태 관리 변수 - 메뉴 버튼 활성화 용
 const isLoggedIn = ref(false); // 로그인 상태 여부
 const hasSelectedMatch = ref(false); // 경기 선택 여부
+const isToolBarClicked = ref(false);
 
-// 상태 관리 - 메뉴 버튼 활성화 관리 용
 const handleUpdateStatus = (status) => {
   isLoggedIn.value = status.isLoggedIn;
   hasSelectedMatch.value = status.hasSelectedMatch;
+  username.value = status.username;
 };
 
 // 로그인 상태 초기화 함수
@@ -89,34 +100,58 @@ const confirmAndLogout = async () => {
   } catch (error) {
     handleError(error);
   } finally {
-    handleNavigate("login");
+    handleNavigate("home");
   }
 };
 
-// 페이지 이동 처리 함수
 const handleNavigate = async (action) => {
   if (action === "logout") {
-    await confirmAndLogout(); // 로그아웃 처리
+    await confirmAndLogout();
+  } else if (action === "home") {
+    isToolBarClicked.value = false;
   } else {
-    navigate(router, sessionContext, action); // 다른 페이지로 이동
+    isToolBarClicked.value = true;
+    navigate(router, sessionContext, action);
   }
 };
 
 const handleError = (error) => {
-  message.value = error.response
-    ? error.response.data
-    : error.request
-    ? messageCommon.ERR_NETWORK
-    : messageCommon.ERR_ETC;
+  //refresh expired인 경우 400발생
+  if (
+    error.response?.status === 403 ||
+    error.response?.status === 401 ||
+    error.response?.status === 400
+  ) {
+    Dialog.create({
+      title: "알림림",
+      message: "로그아웃 되었습니다..",
+      ok: {
+        label: "확인",
+        color: "primary",
+      },
+      persistent: true,
+    });
+
+    clearSessionByContext(sessionContext);
+    resetLoginStatus();
+    navigate(router, sessionContext, "home"); // 로그인 화면으로 이동
+  } else {
+    if (error.response) {
+      message.value = error.response.data;
+    } else if (error.request) {
+      message.value = messageCommon.ERR_NETWORK;
+    } else {
+      message.value = messageCommon.ERR_ETC;
+    }
+  }
 };
 
 onBeforeMount(() => {
   saveSessionContext(sessionContext);
 });
 
-// 컴포넌트 마운트 시 실행
 onMounted(() => {
-  handleNavigate("login"); // 로그인 페이지로 이동
+  resetLoginStatus();
 });
 </script>
 

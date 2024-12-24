@@ -12,8 +12,11 @@
       />
       <q-toolbar-title>
         입찰 시스템 대회 등록
-        <!-- 로그인된 경우 사용자 이름 표시 -->
-        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+        <span
+          v-if="username && username.trim() !== ''"
+          style="font-size: 14px; display: inline-block; margin-left: 8px"
+          >- {{ username }}님</span
+        >
       </q-toolbar-title>
 
       <!-- 데스크탑용 버튼들 -->
@@ -52,6 +55,14 @@
         @click="handleClickAction('login')"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <q-btn
+        flat
+        round
+        dense
+        label="로그인"
+        v-if="!isLoggedIn"
+        @click="handleClickAction('login')"
+      />
       <q-btn
         flat
         round
@@ -96,6 +107,14 @@
         <q-icon name="home" />홈
       </q-item>
       <q-item
+        v-if="!isLoggedIn"
+        clickable
+        v-ripple
+        @click="handleClickAction('login')"
+      >
+        <q-item-section>로그인</q-item-section>
+      </q-item>
+      <q-item
         clickable
         v-ripple
         @click="handleClickAction('logout')"
@@ -108,7 +127,7 @@
 </template>
 
 <script setup>
-import { ref, toRefs, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 
 const props = defineProps({
   isLoggedIn: {

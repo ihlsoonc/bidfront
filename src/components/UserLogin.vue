@@ -167,7 +167,7 @@ const validateInput = () => {
 
 // 세션 로그인 상태 초기화
 const resetLoginStatus = () => (userData.value.query = localSessionData.telno);
-userData.value.password = "   ";
+userData.value.password = "...";
 emit("update-status", {
   isLoggedIn: false,
   hasSelectedMatch: false,
@@ -183,7 +183,7 @@ const setLoggedIn = () =>
 
 const handleError = (error) => {
   message.value = error.response
-    ? error.response.data
+    ? error.response.data.message
     : error.request
     ? messageCommon.ERR_NETWORK
     : messageCommon.ERR_ETC;

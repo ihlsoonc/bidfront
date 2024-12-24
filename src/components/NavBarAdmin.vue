@@ -13,7 +13,11 @@
       <q-toolbar-title>
         입찰 시스템 관리자용 시스템
         <!-- 로그인된 경우 사용자 이름 표시 -->
-        <span v-if="username" style="font-size: 14px">- {{ username }}님</span>
+        <span
+          v-if="username && username.trim() !== ''"
+          style="font-size: 14px; display: inline-block; margin-left: 8px"
+          >- {{ username }}님</span
+        >
       </q-toolbar-title>
 
       <!-- 데스크탑에서만 버튼 표시 -->
@@ -40,9 +44,17 @@
         round
         dense
         icon="home"
-        @click="handleClickAction('login')"
+        @click="handleClickAction('home')"
         v-if="$q.screen.gt.md"
       />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+      <q-btn
+        flat
+        round
+        dense
+        label="로그인"
+        v-if="!isLoggedIn"
+        @click="handleClickAction('login')"
+      />
       <q-btn
         flat
         round
@@ -50,8 +62,7 @@
         label="로그아웃"
         icon="logout"
         @click="handleClickAction('logout')"
-        :disable="!isLoggedIn"
-        v-if="$q.screen.gt.md"
+        v-if="isLoggedIn"
       />
     </q-toolbar>
   </q-header>
@@ -76,6 +87,14 @@
       </q-item>
       <q-item clickable v-ripple @click="handleClickAction('login')">
         <q-icon name="home" />홈
+      </q-item>
+      <q-item
+        v-if="!isLoggedIn"
+        clickable
+        v-ripple
+        @click="handleClickAction('login')"
+      >
+        <q-item-section>로그인</q-item-section>
       </q-item>
       <q-item
         clickable
